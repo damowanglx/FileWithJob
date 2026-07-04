@@ -1,15 +1,19 @@
 interface StatusBarProps {
   charCount: number;
+  wordCount: number;
   lineCount: number;
   currentLine: number;
+  currentCol: number;
   fileName: string;
   isModified: boolean;
 }
 
 export function StatusBar({
   charCount,
+  wordCount,
   lineCount,
   currentLine,
+  currentCol,
   fileName,
   isModified,
 }: StatusBarProps) {
@@ -29,8 +33,9 @@ export function StatusBar({
         </span>
       </div>
       <div className="flex items-center gap-4">
-        <span>行 {currentLine}</span>
+        <span>行 {currentLine}, 列 {currentCol}</span>
         <span>{lineCount} 行</span>
+        <span>{wordCount} 词</span>
         <span>{charCount} 字符</span>
         <span>UTF-8</span>
         <span>Markdown</span>

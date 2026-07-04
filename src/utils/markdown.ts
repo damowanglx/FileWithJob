@@ -17,23 +17,41 @@ marked.use({
         .replace(/<[^>]*>/g, "")
         .replace(/[^\w一-鿿]+/g, "-")
         .replace(/^-+|-+$/g, "");
-      return `<h${depth} id="${id}">${text}</h${depth}>`;
+      return `<h${depth} id="${id}"><a class="heading-anchor" href="#${id}">#</a>${text}</h${depth}>`;
     },
 
-    // Add syntax highlighting and copy button to code blocks
+    // Add syntax highlighting, copy button, and language label to code blocks
     code({ text, lang }: { text: string; lang?: string | null }): string {
       const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
       const highlighted = hljs.highlight(text, { language }).value;
-      return `<pre><code class="hljs language-${language}">${highlighted}</code><button class="code-copy-btn" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(text)}')).then(()=>{this.textContent='已复制';setTimeout(()=>{this.textContent='复制'},1500)})">复制</button></pre>`;
+      const langLabel = lang ? `<span class="code-lang-label">${lang}</span>` : "";
+      return `<pre>${langLabel}<code class="hljs language-${language}">${highlighted}</code><button class="code-copy-btn" data-code="${encodeURIComponent(text)}">复制</button></pre>`;
     },
 
-    // Support local images
+    // Support local images with error handling
     image({ href, title, text }: { href: string; title?: string | null; text: string }): string {
       const titleAttr = title ? ` title="${title}"` : "";
-      return `<img src="${href}" alt="${text}"${titleAttr} loading="lazy" />`;
+      return `<img src="${href}" alt="${text}"${titleAttr} loading="lazy" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=\\'color:#ef4444;font-size:12px\\'>图片加载失败: ${text}</span>')" />`;
     },
   },
 });
+
+// Setup copy button event delegation
+if (typeof document !== "undefined") {
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains("code-copy-btn")) {
+      const code = decodeURIComponent(target.getAttribute("data-code") || "");
+      navigator.clipboard.writeText(code).then(() => {
+        target.textContent = "已复制";
+        setTimeout(() => { target.textContent = "复制"; }, 1500);
+      }).catch(() => {
+        target.textContent = "复制失败";
+        setTimeout(() => { target.textContent = "复制"; }, 1500);
+      });
+    }
+  });
+}
 
 /**
  * Parse markdown string to HTML

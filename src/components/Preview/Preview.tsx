@@ -1,4 +1,4 @@
-import { useMemo, useRef, forwardRef, useImperativeHandle } from "react";
+import { useMemo, useRef, forwardRef, useImperativeHandle, useEffect } from "react";
 import { parseMarkdown } from "../../utils/markdown";
 import "../../styles/preview.css";
 
@@ -20,12 +20,32 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(function Preview(
     getElement: () => previewRef.current,
   }));
 
+  // Handle link clicks in preview (open in browser)
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "A") {
+        e.preventDefault();
+        const href = target.getAttribute("href");
+        if (href && href.startsWith("http")) {
+          window.open(href, "_blank");
+        }
+      }
+    };
+
+    el.addEventListener("click", handleClick);
+    return () => el.removeEventListener("click", handleClick);
+  }, []);
+
   const html = useMemo(() => {
     if (!content.trim()) return "";
     try {
       return parseMarkdown(content);
     } catch (err) {
-      return `<p style="color: var(--text-secondary); font-style: italic;">渲染出错: ${err}</p>`;
+      return `<p style="color: #ef4444;">渲染出错: ${err}</p>`;
     }
   }, [content]);
 
