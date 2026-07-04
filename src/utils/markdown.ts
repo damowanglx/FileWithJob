@@ -7,13 +7,30 @@ marked.setOptions({
   gfm: true,
 });
 
-// Custom renderer for code blocks with syntax highlighting
+// Custom renderer
 marked.use({
   renderer: {
+    // Add anchor links to headings
+    heading({ text, depth }: { text: string; depth: number }): string {
+      const id = text
+        .toLowerCase()
+        .replace(/<[^>]*>/g, "")
+        .replace(/[^\w一-鿿]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      return `<h${depth} id="${id}">${text}</h${depth}>`;
+    },
+
+    // Add syntax highlighting and copy button to code blocks
     code({ text, lang }: { text: string; lang?: string | null }): string {
       const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
       const highlighted = hljs.highlight(text, { language }).value;
-      return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+      return `<pre><code class="hljs language-${language}">${highlighted}</code><button class="code-copy-btn" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(text)}')).then(()=>{this.textContent='已复制';setTimeout(()=>{this.textContent='复制'},1500)})">复制</button></pre>`;
+    },
+
+    // Support local images
+    image({ href, title, text }: { href: string; title?: string | null; text: string }): string {
+      const titleAttr = title ? ` title="${title}"` : "";
+      return `<img src="${href}" alt="${text}"${titleAttr} loading="lazy" />`;
     },
   },
 });
@@ -23,5 +40,9 @@ marked.use({
  */
 export function parseMarkdown(content: string): string {
   if (!content) return "";
-  return marked.parse(content) as string;
+  try {
+    return marked.parse(content) as string;
+  } catch (err) {
+    return `<p style="color: #ef4444;">Markdown 解析错误: ${err}</p>`;
+  }
 }

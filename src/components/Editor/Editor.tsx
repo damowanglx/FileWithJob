@@ -10,20 +10,37 @@ interface EditorProps {
   content: string;
   onChange: (content: string) => void;
   onCursorChange?: (line: number) => void;
+  onEditorReady?: (view: EditorView) => void;
   theme: Theme;
 }
 
-// Use Compartment for dynamic theme switching without recreating editor
 const themeCompartment = new Compartment();
+const fontSizeTheme = EditorView.theme({
+  "&": {
+    fontSize: "14px",
+  },
+  ".cm-content": {
+    padding: "8px 0",
+    fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, 'Courier New', monospace",
+  },
+  ".cm-line": {
+    padding: "0 12px",
+  },
+  ".cm-gutters": {
+    fontSize: "13px",
+  },
+});
 
-export function Editor({ content, onChange, onCursorChange, theme }: EditorProps) {
+export function Editor({ content, onChange, onCursorChange, onEditorReady, theme }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   const onCursorChangeRef = useRef(onCursorChange);
+  const onEditorReadyRef = useRef(onEditorReady);
 
   onChangeRef.current = onChange;
   onCursorChangeRef.current = onCursorChange;
+  onEditorReadyRef.current = onEditorReady;
 
   // Initialize editor once
   useEffect(() => {
@@ -33,7 +50,6 @@ export function Editor({ content, onChange, onCursorChange, theme }: EditorProps
       if (update.docChanged) {
         onChangeRef.current(update.state.doc.toString());
       }
-      // Track cursor position
       if (update.selectionSet || update.docChanged) {
         const pos = update.state.selection.main.head;
         const line = update.state.doc.lineAt(pos).number;
@@ -46,6 +62,7 @@ export function Editor({ content, onChange, onCursorChange, theme }: EditorProps
       markdown({ base: markdownLanguage, codeLanguages: languages }),
       updateListener,
       EditorView.lineWrapping,
+      fontSizeTheme,
       themeCompartment.of(theme === "dark" ? oneDark : []),
     ];
 
@@ -60,34 +77,33 @@ export function Editor({ content, onChange, onCursorChange, theme }: EditorProps
     });
 
     viewRef.current = view;
-
-    // Auto focus
     view.focus();
+
+    // Notify parent that editor is ready
+    onEditorReadyRef.current?.(view);
 
     return () => {
       view.destroy();
       viewRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only initialize once
+  }, []);
 
-  // Dynamic theme switching without recreating editor
+  // Dynamic theme switching
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-
     view.dispatch({
       effects: themeCompartment.reconfigure(theme === "dark" ? oneDark : []),
     });
   }, [theme]);
 
-  // Sync content from parent when file changes (e.g., file opened)
+  // Sync content from parent when file changes
   const prevContentRef = useRef(content);
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
 
-    // Only update if content changed externally (not from typing)
     if (content !== prevContentRef.current && content !== view.state.doc.toString()) {
       view.dispatch({
         changes: {
