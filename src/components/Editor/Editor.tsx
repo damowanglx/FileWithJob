@@ -3,30 +3,41 @@ import { EditorView, basicSetup } from "codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Compartment } from "@codemirror/state";
 import type { Theme } from "../../hooks/useTheme";
 
 interface EditorProps {
   content: string;
   onChange: (content: string) => void;
+  onCursorChange?: (line: number) => void;
   theme: Theme;
 }
 
-export function Editor({ content, onChange, theme }: EditorProps) {
+// Use Compartment for dynamic theme switching without recreating editor
+const themeCompartment = new Compartment();
+
+export function Editor({ content, onChange, onCursorChange, theme }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
+  const onCursorChangeRef = useRef(onCursorChange);
 
-  // Keep callback ref updated
   onChangeRef.current = onChange;
+  onCursorChangeRef.current = onCursorChange;
 
-  // Initialize editor
+  // Initialize editor once
   useEffect(() => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || viewRef.current) return;
 
     const updateListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         onChangeRef.current(update.state.doc.toString());
+      }
+      // Track cursor position
+      if (update.selectionSet || update.docChanged) {
+        const pos = update.state.selection.main.head;
+        const line = update.state.doc.lineAt(pos).number;
+        onCursorChangeRef.current?.(line);
       }
     });
 
@@ -35,11 +46,8 @@ export function Editor({ content, onChange, theme }: EditorProps) {
       markdown({ base: markdownLanguage, codeLanguages: languages }),
       updateListener,
       EditorView.lineWrapping,
+      themeCompartment.of(theme === "dark" ? oneDark : []),
     ];
-
-    if (theme === "dark") {
-      extensions.push(oneDark);
-    }
 
     const state = EditorState.create({
       doc: content,
@@ -53,20 +61,33 @@ export function Editor({ content, onChange, theme }: EditorProps) {
 
     viewRef.current = view;
 
+    // Auto focus
+    view.focus();
+
     return () => {
       view.destroy();
       viewRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme]); // Recreate editor when theme changes
+  }, []); // Only initialize once
 
-  // Sync content from parent when file changes
+  // Dynamic theme switching without recreating editor
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    view.dispatch({
+      effects: themeCompartment.reconfigure(theme === "dark" ? oneDark : []),
+    });
+  }, [theme]);
+
+  // Sync content from parent when file changes (e.g., file opened)
   const prevContentRef = useRef(content);
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
 
-    // Only update if content changed externally (e.g., file opened)
+    // Only update if content changed externally (not from typing)
     if (content !== prevContentRef.current && content !== view.state.doc.toString()) {
       view.dispatch({
         changes: {

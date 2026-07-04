@@ -14,7 +14,7 @@ function App() {
   const [content, setContent] = useState("");
   const [filePath, setFilePath] = useState<string | null>(null);
   const [isModified, setIsModified] = useState(false);
-  const [currentLine] = useState(1);
+  const [currentLine, setCurrentLine] = useState(1);
   const previewRef = useRef<PreviewRef>(null);
 
   // Handle content changes from editor
@@ -23,11 +23,17 @@ function App() {
     setIsModified(true);
   }, []);
 
+  // Track cursor line position
+  const handleCursorChange = useCallback((line: number) => {
+    setCurrentLine(line);
+  }, []);
+
   // New file
   const handleNewFile = useCallback(() => {
     setContent("");
     setFilePath(null);
     setIsModified(false);
+    setCurrentLine(1);
   }, []);
 
   // Open file
@@ -36,9 +42,9 @@ function App() {
       const selected = await open({
         multiple: false,
         filters: [
-          { name: "Markdown", extensions: ["md"] },
-          { name: "Text", extensions: ["txt"] },
-          { name: "All", extensions: ["*"] },
+          { name: "Markdown 文件", extensions: ["md"] },
+          { name: "文本文件", extensions: ["txt"] },
+          { name: "所有文件", extensions: ["*"] },
         ],
       });
 
@@ -48,9 +54,10 @@ function App() {
         setContent(fileContent);
         setFilePath(path);
         setIsModified(false);
+        setCurrentLine(1);
       }
     } catch (err) {
-      console.error("Failed to open file:", err);
+      console.error("打开文件失败:", err);
     }
   }, []);
 
@@ -64,8 +71,8 @@ function App() {
         // Save As
         const path = await save({
           filters: [
-            { name: "Markdown", extensions: ["md"] },
-            { name: "Text", extensions: ["txt"] },
+            { name: "Markdown 文件", extensions: ["md"] },
+            { name: "文本文件", extensions: ["txt"] },
           ],
         });
 
@@ -76,7 +83,7 @@ function App() {
         }
       }
     } catch (err) {
-      console.error("Failed to save file:", err);
+      console.error("保存文件失败:", err);
     }
   }, [filePath, content]);
 
@@ -86,7 +93,7 @@ function App() {
     if (!el) return;
     const filename = filePath
       ? filePath.replace(/\.md$/, ".pdf")
-      : "document.pdf";
+      : "文档.pdf";
     await exportToPdf(el, filename);
   }, [filePath]);
 
@@ -96,7 +103,7 @@ function App() {
     if (!el) return;
     const filename = filePath
       ? filePath.replace(/\.md$/, ".png")
-      : "document.png";
+      : "文档.png";
     await exportToImage(el, filename);
   }, [filePath]);
 
@@ -156,6 +163,7 @@ function App() {
           <Editor
             content={content}
             onChange={handleContentChange}
+            onCursorChange={handleCursorChange}
             theme={theme}
           />
         </div>

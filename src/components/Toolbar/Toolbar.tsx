@@ -30,19 +30,19 @@ export function Toolbar({
       }}
     >
       {/* File operations */}
-      <ToolbarButton onClick={onNewFile} title="New File (Ctrl+N)">
+      <ToolbarButton onClick={onNewFile} title="新建文件 (Ctrl+N)">
         <FileIcon />
-        <span className="text-xs">New</span>
+        <span className="text-xs">新建</span>
       </ToolbarButton>
 
-      <ToolbarButton onClick={onOpenFile} title="Open File (Ctrl+O)">
+      <ToolbarButton onClick={onOpenFile} title="打开文件 (Ctrl+O)">
         <FolderIcon />
-        <span className="text-xs">Open</span>
+        <span className="text-xs">打开</span>
       </ToolbarButton>
 
-      <ToolbarButton onClick={onSaveFile} title="Save File (Ctrl+S)">
+      <ToolbarButton onClick={onSaveFile} title="保存文件 (Ctrl+S)">
         <SaveIcon />
-        <span className="text-xs">Save</span>
+        <span className="text-xs">保存</span>
       </ToolbarButton>
 
       <div className="w-px h-6 mx-1" style={{ backgroundColor: "var(--border-color)" }} />
@@ -50,7 +50,7 @@ export function Toolbar({
       {/* Export */}
       <ToolbarButton
         onClick={onExportPdf}
-        title="Export as PDF"
+        title="导出为 PDF"
         disabled={!hasContent}
       >
         <PdfIcon />
@@ -59,19 +59,19 @@ export function Toolbar({
 
       <ToolbarButton
         onClick={onExportImage}
-        title="Export as Image"
+        title="导出为图片"
         disabled={!hasContent}
       >
         <ImageIcon />
-        <span className="text-xs">Image</span>
+        <span className="text-xs">图片</span>
       </ToolbarButton>
 
       <div className="flex-1" />
 
       {/* Theme toggle */}
-      <ToolbarButton onClick={onToggleTheme} title="Toggle Theme">
+      <ToolbarButton onClick={onToggleTheme} title="切换主题">
         {theme === "light" ? <MoonIcon /> : <SunIcon />}
-        <span className="text-xs">{theme === "light" ? "Dark" : "Light"}</span>
+        <span className="text-xs">{theme === "light" ? "暗色" : "亮色"}</span>
       </ToolbarButton>
     </div>
   );

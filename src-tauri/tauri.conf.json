@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "FileWithJob - Markdown Editor",
+        "title": "FileWithJob - Markdown 编辑器",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

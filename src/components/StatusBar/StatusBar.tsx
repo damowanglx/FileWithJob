@@ -24,14 +24,14 @@ export function StatusBar({
     >
       <div className="flex items-center gap-3">
         <span>
-          {fileName || "Untitled"}
-          {isModified && " •"}
+          {fileName || "未命名"}
+          {isModified && " • 已修改"}
         </span>
       </div>
       <div className="flex items-center gap-3">
-        <span>Line {currentLine}</span>
-        <span>{lineCount} lines</span>
-        <span>{charCount} chars</span>
+        <span>第 {currentLine} 行</span>
+        <span>共 {lineCount} 行</span>
+        <span>{charCount} 字符</span>
       </div>
     </div>
   );
