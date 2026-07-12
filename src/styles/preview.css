@@ -1,4 +1,4 @@
-/* Markdown Preview Styles */
+﻿/* Markdown Preview Styles */
 .markdown-preview {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 15px;
@@ -37,29 +37,6 @@
 .markdown-preview h6 {
   font-weight: 600;
   margin: 0.8em 0 0.4em;
-}
-
-/* Heading anchor links */
-.markdown-preview .heading-anchor {
-  color: var(--accent-color);
-  text-decoration: none;
-  margin-right: 0.3em;
-  opacity: 0;
-  transition: opacity 0.2s;
-  font-weight: 400;
-}
-
-.markdown-preview h1:hover .heading-anchor,
-.markdown-preview h2:hover .heading-anchor,
-.markdown-preview h3:hover .heading-anchor,
-.markdown-preview h4:hover .heading-anchor,
-.markdown-preview h5:hover .heading-anchor,
-.markdown-preview h6:hover .heading-anchor {
-  opacity: 0.6;
-}
-
-.markdown-preview .heading-anchor:hover {
-  opacity: 1;
 }
 
 .markdown-preview p {
@@ -127,18 +104,6 @@
   color: #abb2bf;
 }
 
-/* Code language label */
-.markdown-preview .code-lang-label {
-  position: absolute;
-  top: 6px;
-  left: 12px;
-  font-size: 11px;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  user-select: none;
-}
-
 .markdown-preview ul,
 .markdown-preview ol {
   margin: 0.5em 0;
@@ -167,7 +132,6 @@
   margin: 0.5em 0;
 }
 
-/* Table with overflow scroll */
 .markdown-preview table {
   width: 100%;
   border-collapse: collapse;
@@ -204,7 +168,67 @@
   margin-left: -1.5em;
 }
 
-/* Copy button for code blocks */
+/* 数学公式样式 */
+.markdown-preview .math-block {
+  margin: 1em 0;
+  padding: 1em;
+  background-color: var(--bg-secondary);
+  border-radius: 6px;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.markdown-preview .math-inline {
+  padding: 0 2px;
+}
+
+.markdown-preview .math-error {
+  color: #ef4444;
+  font-family: monospace;
+}
+
+/* KaTeX 样式覆盖 */
+.katex-display {
+  margin: 0 !important;
+}
+
+.katex {
+  font-size: 1.1em;
+}
+
+/* Mermaid 图表样式 */
+.markdown-preview .mermaid-container {
+  margin: 1em 0;
+  padding: 1em;
+  background-color: var(--bg-secondary);
+  border-radius: 6px;
+  text-align: center;
+  overflow-x: auto;
+}
+
+.markdown-preview .mermaid-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-preview .mermaid-error {
+  color: #ef4444;
+  padding: 1em;
+  text-align: center;
+}
+
+/* 代码块样式增强 */
+.code-lang-label {
+  position: absolute;
+  top: 6px;
+  left: 12px;
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+
 .markdown-preview pre:hover .code-copy-btn {
   opacity: 1;
 }
@@ -229,7 +253,7 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* Dark mode adjustments */
+/* 暗色模式调整 */
 [data-theme="dark"] .markdown-preview {
   color: #d4d4d4;
 }
@@ -247,7 +271,15 @@
   background-color: #252535;
 }
 
-[data-theme="dark"] .markdown-preview .code-lang-label {
+[data-theme="dark"] .markdown-preview .math-block {
+  background-color: #2d2d3d;
+}
+
+[data-theme="dark"] .markdown-preview .mermaid-container {
+  background-color: #2d2d3d;
+}
+
+[data-theme="dark"] .code-lang-label {
   color: #8b8b9e;
 }
 
@@ -255,4 +287,14 @@
 .hljs {
   background: transparent !important;
   padding: 0 !important;
+}
+
+/* 预览内容区域 */
+.preview-content {
+  padding: 0;
+  height: 100%;
+}
+
+.preview-content > *:first-child {
+  margin-top: 0;
 }

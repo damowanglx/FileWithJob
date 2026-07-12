@@ -1,8 +1,11 @@
 @import "tailwindcss";
 @import "highlight.js/styles/github-dark.css";
 
-/* Custom theme variables */
-:root {
+/* ============================================
+   CSS 变量定义（避免重复）
+   ============================================ */
+:root,
+[data-theme="light"] {
   --bg-primary: #ffffff;
   --bg-secondary: #f8f9fa;
   --bg-sidebar: #f0f1f3;
@@ -11,6 +14,8 @@
   --border-color: #e5e7eb;
   --accent-color: #3b82f6;
   --accent-hover: #2563eb;
+  --scrollbar-thumb: #c1c1c6;
+  --scrollbar-thumb-hover: #a1a1a6;
 }
 
 [data-theme="dark"] {
@@ -22,8 +27,13 @@
   --border-color: #3a3a4c;
   --accent-color: #60a5fa;
   --accent-hover: #3b82f6;
+  --scrollbar-thumb: #4a4a5c;
+  --scrollbar-thumb-hover: #5a5a6c;
 }
 
+/* ============================================
+   基础样式
+   ============================================ */
 * {
   margin: 0;
   padding: 0;
@@ -44,10 +54,12 @@ body {
   height: 100vh;
 }
 
-/* Scrollbar styling - Light mode */
+/* ============================================
+   滚动条样式（统一定义）
+   ============================================ */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -55,33 +67,187 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c6;
-  border-radius: 5px;
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
   border: 2px solid var(--bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a6;
+  background: var(--scrollbar-thumb-hover);
 }
 
-/* Scrollbar styling - Dark mode */
-[data-theme="dark"] ::-webkit-scrollbar-thumb {
-  background: #4a4a5c;
-  border-color: var(--bg-secondary);
-}
-
-[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
-  background: #5a5a6c;
-}
-
-/* Selection color */
+/* ============================================
+   选择和焦点样式
+   ============================================ */
 ::selection {
   background-color: var(--accent-color);
   color: white;
 }
 
-/* Focus outline */
 :focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: 2px;
+}
+
+/* ============================================
+   动画
+   ============================================ */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 动画工具类 */
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================
+   过渡效果
+   ============================================ */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* ============================================
+   响应式设计
+   ============================================ */
+@media (max-width: 640px) {
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  
+  .toolbar-button {
+    padding: 0.25rem;
+  }
+  
+  .toolbar-button span {
+    display: none;
+  }
+  
+  .editor-container {
+    flex-direction: column;
+  }
+  
+  .preview-pane {
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
+  
+  .preview-pane {
+    width: 40%;
+  }
+}
+
+@media (min-width: 1025px) {
+  .preview-pane {
+    width: 50%;
+  }
+}
+
+/* ============================================
+   打印样式
+   ============================================ */
+@media print {
+  .toolbar,
+  .status-bar,
+  .sidebar {
+    display: none !important;
+  }
+  
+  .editor-container {
+    flex-direction: column;
+  }
+  
+  .preview-pane {
+    width: 100%;
+    border: none;
+  }
+}
+
+/* ============================================
+   无障碍支持
+   ============================================ */
+@media (prefers-contrast: high) {
+  :root {
+    --border-color: #000;
+    --text-primary: #000;
+    --text-secondary: #333;
+  }
+  
+  [data-theme="dark"] {
+    --border-color: #fff;
+    --text-primary: #fff;
+    --text-secondary: #ccc;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
