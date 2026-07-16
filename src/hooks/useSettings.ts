@@ -1,7 +1,7 @@
-ï»¿import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export interface Settings {
-  // ç¼–è¾‘å™¨è®¾ç½®
+  // ±à¼­Æ÷ÉèÖÃ
   fontSize: number;
   fontFamily: string;
   tabSize: number;
@@ -12,11 +12,11 @@ export interface Settings {
   autoCloseBrackets: boolean;
   lineWrapping: boolean;
   
-  // ä¸»é¢˜è®¾ç½®
+  // Ö÷ÌâÉèÖÃ
   theme: 'light' | 'dark' | 'system';
-  editorTheme: 'default' | 'monokai' | 'dracula' | 'solarized';
+  editorTheme: 'default' | 'monokai' | 'dracula' | 'solarized' | 'one-dark-pro' | 'solarized-light';
   
-  // æ–‡ä»¶è®¾ç½®
+  // ÎÄ¼þÉèÖÃ
   defaultSavePath: string;
   defaultExportPath: string;
   autoSave: boolean;
@@ -24,22 +24,22 @@ export interface Settings {
   encoding: string;
   lineEnding: 'LF' | 'CRLF';
   
-  // é¢„è§ˆè®¾ç½®
+  // Ô¤ÀÀÉèÖÃ
   showPreview: boolean;
   syncScroll: boolean;
   previewTheme: 'light' | 'dark' | 'auto';
   
-  // ç¼–è¾‘å™¨è¡Œä¸º
+  // ±à¼­Æ÷ÐÐÎª
   smoothScrolling: boolean;
   cursorBlinking: 'blink' | 'smooth' | 'phase' | 'expand' | 'solid';
   cursorStyle: 'line' | 'block' | 'underline';
   
-  // é«˜çº§è®¾ç½®
+  // ¸ß¼¶ÉèÖÃ
   hardwareAcceleration: boolean;
 }
 
 const defaultSettings: Settings = {
-  // ç¼–è¾‘å™¨è®¾ç½®
+  // ±à¼­Æ÷ÉèÖÃ
   fontSize: 14,
   fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, 'Courier New', monospace",
   tabSize: 2,
@@ -50,11 +50,11 @@ const defaultSettings: Settings = {
   autoCloseBrackets: true,
   lineWrapping: true,
   
-  // ä¸»é¢˜è®¾ç½®
+  // Ö÷ÌâÉèÖÃ
   theme: 'system',
   editorTheme: 'default',
   
-  // æ–‡ä»¶è®¾ç½®
+  // ÎÄ¼þÉèÖÃ
   defaultSavePath: '',
   defaultExportPath: '',
   autoSave: true,
@@ -62,17 +62,17 @@ const defaultSettings: Settings = {
   encoding: 'UTF-8',
   lineEnding: 'LF',
   
-  // é¢„è§ˆè®¾ç½®
+  // Ô¤ÀÀÉèÖÃ
   showPreview: true,
   syncScroll: true,
   previewTheme: 'auto',
   
-  // ç¼–è¾‘å™¨è¡Œä¸º
+  // ±à¼­Æ÷ÐÐÎª
   smoothScrolling: true,
   cursorBlinking: 'blink',
   cursorStyle: 'line',
   
-  // é«˜çº§è®¾ç½®
+  // ¸ß¼¶ÉèÖÃ
   hardwareAcceleration: true,
 };
 
@@ -91,7 +91,7 @@ export function useSettings() {
     return defaultSettings;
   });
 
-  // ä¿å­˜è®¾ç½®åˆ° localStorage
+  // ±£´æÉèÖÃµ½ localStorage
   useEffect(() => {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));

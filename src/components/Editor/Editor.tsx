@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
@@ -7,25 +7,38 @@ import { EditorState, Compartment } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { indentMore, indentLess } from '@codemirror/commands';
 import { autocompletion } from '@codemirror/autocomplete';
+import { search, SearchQuery, setSearchQuery, getSearchQuery, findNext, findPrevious, replaceNext, replaceAll as searchReplaceAll, highlightSelectionMatches } from '@codemirror/search';
+import { foldKeymap } from '@codemirror/language';
 import type { Extension } from '@codemirror/state';
 import type { Theme } from '../../hooks/useTheme';
+
+export interface EditorSearchHandle {
+  search: (query: string, options: { caseSensitive: boolean; wholeWord: boolean; useRegex: boolean }) => void;
+  replace: (replacementText: string, replaceAllFlag: boolean) => void;
+  findNext: () => void;
+  findPrevious: () => void;
+}
 
 interface EditorProps {
   content: string;
   onChange: (content: string) => void;
-  onCursorChange?: (line: number, col: number) => void;
+  onCursorChange?: (line: number, col: number, lineContent?: string) => void;
   onEditorReady?: (view: EditorView) => void;
+  onSearchReady?: (handle: EditorSearchHandle) => void;
   theme: Theme;
   language?: string;
+  fontSize?: number;
 }
+
+const DEFAULT_FONT_SIZE = 14;
 
 const themeCompartment = new Compartment();
 const languageCompartment = new Compartment();
+const fontSizeCompartment = new Compartment();
 
-// Editor font and padding theme
+// Editor base theme (font size is handled by fontSizeCompartment for dynamic updates)
 const editorTheme = EditorView.theme({
   '&': {
-    fontSize: '14px',
     height: '100%',
   },
   '.cm-content': {
@@ -36,7 +49,6 @@ const editorTheme = EditorView.theme({
     padding: '0 12px',
   },
   '.cm-gutters': {
-    fontSize: '13px',
     minWidth: '40px',
   },
   '.cm-scroller': {
@@ -48,27 +60,60 @@ const editorTheme = EditorView.theme({
   '.cm-activeLineGutter': {
     backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
+  // Fold gutter arrow styles
+  '.cm-foldGutter .cm-gutterElement': {
+    cursor: 'pointer',
+    color: 'rgba(128, 128, 128, 0.6)',
+    fontSize: '12px',
+    lineHeight: '1.2',
+    transition: 'color 0.15s ease',
+  },
+  '.cm-foldGutter .cm-gutterElement:hover': {
+    color: 'rgba(59, 130, 246, 0.8)',
+  },
+  '.cm-foldGutter .cm-gutterElement.cm-folded': {
+    color: 'rgba(59, 130, 246, 0.9)',
+  },
+  // Indent guides
+  '.cm-indentGuide': {
+    borderLeft: '1px solid rgba(128, 128, 128, 0.3)',
+  },
+  '&dark .cm-indentGuide': {
+    borderLeft: '1px solid rgba(255, 255, 255, 0.15)',
+  },
 });
+
+// Create a theme extension for dynamic font size
+function createFontSizeTheme(fontSize: number) {
+  return EditorView.theme({
+    '&': {
+      fontSize: `${fontSize}px`,
+    },
+    '.cm-gutters': {
+      fontSize: `${Math.max(fontSize - 1, 10)}px`,
+    },
+  });
+}
 
 // Tab key mapping
 const tabKeymap = keymap.of([{ key: 'Tab', run: indentMore, shift: indentLess }]);
 
 // Markdown completions
 const markdownCompletions = [
-  { label: '# ', detail: 'ä¸€çº§æ ‡é¢˜', type: 'keyword', apply: '# ' },
-  { label: '## ', detail: 'äºŒçº§æ ‡é¢˜', type: 'keyword', apply: '## ' },
-  { label: '### ', detail: 'ä¸‰çº§æ ‡é¢˜', type: 'keyword', apply: '### ' },
-  { label: '**', detail: 'ç²—ä½“', type: 'keyword', apply: '**æ–‡æœ¬**' },
-  { label: '*', detail: 'æ–œä½“', type: 'keyword', apply: '*æ–‡æœ¬*' },
-  { label: '~~', detail: 'åˆ é™¤çº¿', type: 'keyword', apply: '~~æ–‡æœ¬~~' },
-  { label: '- ', detail: 'æ— åºåˆ—è¡¨', type: 'keyword', apply: '- ' },
-  { label: '1. ', detail: 'æœ‰åºåˆ—è¡¨', type: 'keyword', apply: '1. ' },
-  { label: '- [ ] ', detail: 'ä»»åŠ¡åˆ—è¡¨', type: 'keyword', apply: '- [ ] ' },
-  { label: '[', detail: 'é“¾æŽ¥', type: 'keyword', apply: '[æ–‡æœ¬](é“¾æŽ¥)' },
-  { label: '![', detail: 'å›¾ç‰‡', type: 'keyword', apply: '![æ›¿ä»£æ–‡å­—](å›¾ç‰‡é“¾æŽ¥)' },
-  { label: '> ', detail: 'å¼•ç”¨', type: 'keyword', apply: '> ' },
-  { label: '---', detail: 'åˆ†å‰²çº¿', type: 'keyword', apply: '---\n' },
-  { label: '| ', detail: 'è¡¨æ ¼', type: 'keyword', apply: '| åˆ—1 | åˆ—2 |\n| --- | --- |\n| å†…å®¹ | å†…å®¹ |' },
+  { label: '# ', detail: 'Ò»¼¶±êÌâ', type: 'keyword', apply: '# ' },
+  { label: '## ', detail: '¶þ¼¶±êÌâ', type: 'keyword', apply: '## ' },
+  { label: '### ', detail: 'Èý¼¶±êÌâ', type: 'keyword', apply: '### ' },
+  { label: '**', detail: '´ÖÌå', type: 'keyword', apply: '**ÎÄ±¾**' },
+  { label: '*', detail: 'Ð±Ìå', type: 'keyword', apply: '*ÎÄ±¾*' },
+  { label: '~~', detail: 'É¾³ýÏß', type: 'keyword', apply: '~~ÎÄ±¾~~' },
+  { label: '- ', detail: 'ÎÞÐòÁÐ±í', type: 'keyword', apply: '- ' },
+  { label: '1. ', detail: 'ÓÐÐòÁÐ±í', type: 'keyword', apply: '1. ' },
+  { label: '- [ ] ', detail: 'ÈÎÎñÁÐ±í', type: 'keyword', apply: '- [ ] ' },
+  { label: '[', detail: 'Á´½Ó', type: 'keyword', apply: '[ÎÄ±¾](Á´½Ó)' },
+  { label: '![', detail: 'Í¼Æ¬', type: 'keyword', apply: '![Ìæ´úÎÄ×Ö](Í¼Æ¬Á´½Ó)' },
+  { label: '> ', detail: 'ÒýÓÃ', type: 'keyword', apply: '> ' },
+  { label: '---', detail: '·Ö¸îÏß', type: 'keyword', apply: '---\n' },
+  { label: '| ', detail: '±í¸ñ', type: 'keyword', apply: '| ÁÐ1 | ÁÐ2 |\n| --- | --- |\n| ÄÚÈÝ | ÄÚÈÝ |' },
 ];
 
 function markdownCompletionSource(context: any) {
@@ -145,16 +190,23 @@ export function Editor({
   onEditorReady,
   theme,
   language,
+  fontSize: fontSizeProp,
+  onSearchReady,
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   const onCursorChangeRef = useRef(onCursorChange);
   const onEditorReadyRef = useRef(onEditorReady);
+  const onSearchReadyRef = useRef(onSearchReady);
+  const minimapRef = useRef<HTMLDivElement>(null);
 
   onChangeRef.current = onChange;
   onCursorChangeRef.current = onCursorChange;
   onEditorReadyRef.current = onEditorReady;
+  onSearchReadyRef.current = onSearchReady;
+
+  const currentFontSize = fontSizeProp ?? DEFAULT_FONT_SIZE;
 
   // Initialize editor once
   useEffect(() => {
@@ -168,7 +220,29 @@ export function Editor({
         const pos = update.state.selection.main.head;
         const line = update.state.doc.lineAt(pos).number;
         const col = pos - update.state.doc.lineAt(pos).from + 1;
-        onCursorChangeRef.current?.(line, col);
+        const lineText = update.state.doc.lineAt(pos).text;
+        onCursorChangeRef.current?.(line, col, lineText);
+      }
+      // Update minimap scroll indicator
+      if (minimapRef.current) {
+        const scrollDOM = update.view.scrollDOM;
+        const scrollTop = scrollDOM.scrollTop;
+        const scrollHeight = scrollDOM.scrollHeight;
+        const clientHeight = scrollDOM.clientHeight;
+        
+        if (scrollHeight > clientHeight) {
+          const thumbHeightPercent = (clientHeight / scrollHeight) * 100;
+          const maxTop = 100 - thumbHeightPercent;
+          const thumbTopPercent = maxTop > 0
+            ? (scrollTop / (scrollHeight - clientHeight)) * maxTop
+            : 0;
+          
+          minimapRef.current.style.height = `${thumbHeightPercent}%`;
+          minimapRef.current.style.top = `${thumbTopPercent}%`;
+          minimapRef.current.style.display = 'block';
+        } else {
+          minimapRef.current.style.display = 'none';
+        }
       }
     });
 
@@ -178,11 +252,20 @@ export function Editor({
       updateListener,
       EditorView.lineWrapping,
       editorTheme,
+      fontSizeCompartment.of(createFontSizeTheme(currentFontSize)),
       tabKeymap,
+      // Explicitly add foldKeymap for code folding (Ctrl+Shift+[ / Ctrl+Shift+])
+      keymap.of(foldKeymap),
       autocompletion({
         override: [markdownCompletionSource],
         activateOnTyping: true,
       }),
+      search({
+        top: true,
+      }),
+      highlightSelectionMatches(),
+      // Enable browser native spellcheck
+      EditorView.contentAttributes.of({ spellcheck: 'true' }),
       themeCompartment.of(theme === 'dark' ? oneDark : []),
     ];
 
@@ -199,6 +282,60 @@ export function Editor({
     viewRef.current = view;
     view.focus();
     onEditorReadyRef.current?.(view);
+
+    // Expose search/replace handle
+    const searchHandle: EditorSearchHandle = {
+      search: (query: string, options: { caseSensitive: boolean; wholeWord: boolean; useRegex: boolean }) => {
+        const currentView = viewRef.current;
+        if (!currentView) return;
+        if (!query) {
+          currentView.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: "" })) });
+          return;
+        }
+        try {
+          const escaped = options.useRegex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const sq = new SearchQuery({
+            search: escaped,
+            caseSensitive: options.caseSensitive,
+            wholeWord: options.wholeWord,
+            regexp: options.useRegex,
+          });
+          currentView.dispatch({ effects: setSearchQuery.of(sq) });
+          findNext(currentView);
+        } catch {
+          // Invalid regex, ignore
+        }
+      },
+      replace: (replacementText: string, replaceAllFlag: boolean) => {
+        const currentView = viewRef.current;
+        if (!currentView) return;
+        const currentQuery = getSearchQuery(currentView.state);
+        if (currentQuery) {
+          const updatedQuery = new SearchQuery({
+            search: currentQuery.search,
+            caseSensitive: currentQuery.caseSensitive,
+            wholeWord: currentQuery.wholeWord,
+            regexp: currentQuery.regexp,
+            replace: replacementText,
+          });
+          currentView.dispatch({ effects: setSearchQuery.of(updatedQuery) });
+        }
+        if (replaceAllFlag) {
+          searchReplaceAll(currentView);
+        } else {
+          replaceNext(currentView);
+        }
+      },
+      findNext: () => {
+        const currentView = viewRef.current;
+        if (currentView) findNext(currentView);
+      },
+      findPrevious: () => {
+        const currentView = viewRef.current;
+        if (currentView) findPrevious(currentView);
+      },
+    };
+    onSearchReadyRef.current?.(searchHandle);
 
     return () => {
       view.destroy();
@@ -225,6 +362,15 @@ export function Editor({
     });
   }, [language]);
 
+  // Dynamic font size switching
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({
+      effects: fontSizeCompartment.reconfigure(createFontSizeTheme(currentFontSize)),
+    });
+  }, [currentFontSize]);
+
   // Sync content from parent
   const prevContentRef = useRef(content);
   useEffect(() => {
@@ -240,10 +386,27 @@ export function Editor({
   }, [content]);
 
   return (
-    <div
-      ref={editorRef}
-      className="h-full overflow-hidden"
-      style={{ backgroundColor: 'var(--bg-primary)' }}
-    />
+    <div className="relative h-full overflow-hidden">
+      <div
+        ref={editorRef}
+        spellCheck={true}
+        className="h-full overflow-hidden"
+        style={{ backgroundColor: 'var(--bg-primary)' }}
+      />
+      {/* Scroll position indicator (minimap-like) */}
+      <div
+        className="absolute right-0 top-0 bottom-0 w-[3px] opacity-0 hover:opacity-100 transition-opacity duration-300"
+        style={{ zIndex: 5 }}
+      >
+        <div
+          ref={minimapRef}
+          className="absolute left-0 w-full rounded-full"
+          style={{
+            backgroundColor: 'rgba(128, 128, 128, 0.5)',
+            minHeight: '20px',
+          }}
+        />
+      </div>
+    </div>
   );
 }

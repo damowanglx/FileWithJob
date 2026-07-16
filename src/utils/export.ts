@@ -1,25 +1,49 @@
-ï»¿import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
 
 /**
- * å¯¼å‡ºé¢„è§ˆåŒºåŸŸä¸º PDF
+ * ½âÎö Markdown ÄÚÈİÖĞµÄ±êÌâ£¬·µ»Ø { level, text, yPosition }[]
+ * ÓÃÓÚÉú³É PDF ÊéÇ©
+ */
+function parseMarkdownHeadings(markdown: string): Array<{ level: number; text: string }> {
+  const headings: Array<{ level: number; text: string }> = [];
+  const lines = markdown.split('\n');
+  
+  for (const line of lines) {
+    const match = line.match(/^(#{1,6})\s+(.+)$/);
+    if (match) {
+      const level = match[1].length;
+      const text = match[2].replace(/[*_`~\[\]]/g, '').trim();
+      headings.push({ level, text });
+    }
+  }
+  
+  return headings;
+}
+
+/**
+ * µ¼³öÔ¤ÀÀÇøÓòÎª PDF£¬Ö§³ÖÒ³Ã¼Ò³½ÅºÍÄ¿Â¼ÊéÇ©
  */
 export async function exportToPdf(
   element: HTMLElement,
   filename: string = 'document.pdf',
-  defaultPath?: string
+  defaultPath?: string,
+  markdownContent?: string
 ): Promise<void> {
   try {
-    // æ˜¾ç¤ºä¿å­˜å¯¹è¯æ¡†
+    // ÏÔÊ¾±£´æ¶Ô»°¿ò
     const filePath = await save({
       defaultPath: defaultPath ? `${defaultPath}\\${filename}` : filename,
       filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
     });
     if (!filePath) return;
 
-    // ç”Ÿæˆ Canvas
+    // »ñÈ¡ÎÄ¼şÃû£¨²»º¬À©Õ¹Ãû£©ÓÃÓÚÒ³Ã¼
+    const displayName = filename.replace(/\.pdf$/i, '');
+
+    // Éú³É Canvas
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
@@ -32,22 +56,128 @@ export async function exportToPdf(
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
+    
+    // Ò³Ã¼Ò³½ÅÇøÓò¸ß¶È
+    const headerHeight = 12;
+    const footerHeight = 12;
+    const marginTop = headerHeight + 4; // Ò³Ã¼ÏÂ·½Áô°×
+    const marginBottom = footerHeight + 2; // Ò³½ÅÉÏ·½Áô°×
+    const contentAreaHeight = pdfHeight - marginTop - marginBottom;
+    
     const imgWidth = pdfWidth - 20;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    
+    // ¼ÆËã×ÜÒ³Êı
+    let totalPages = 1;
+    let tempHeightLeft = imgHeight;
+    while (tempHeightLeft > contentAreaHeight) {
+      totalPages++;
+      tempHeightLeft -= contentAreaHeight;
+    }
+    
     let heightLeft = imgHeight;
-    let position = 10;
+    let position = marginTop;
+    let currentPage = 1;
 
-    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-    heightLeft -= pdfHeight;
-
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight + 10;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
+    // ½âÎö±êÌâÓÃÓÚÊéÇ©
+    const headings = markdownContent ? parseMarkdownHeadings(markdownContent) : [];
+    
+    // ´´½¨ÊéÇ©¸ù½Úµã
+    let bookmarkRoot: any = null;
+    if (headings.length > 0) {
+      try {
+        bookmarkRoot = pdf.outline.add(null, 'Ä¿Â¼', { pageNumber: 1 });
+      } catch {
+        // outline API ²»¿ÉÓÃÊ±ºöÂÔ
+      }
     }
 
-    // ä¿å­˜æ–‡ä»¶
+    // Ìí¼ÓµÚÒ»Ò³ÄÚÈİ
+    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+    heightLeft -= contentAreaHeight;
+
+    // Ìí¼ÓÒ³Ã¼Ò³½Åµ½Ã¿Ò»Ò³
+    const addHeaderFooter = (page: number) => {
+      // ÉèÖÃ»ÒÉ«
+      pdf.setTextColor(150, 150, 150);
+      pdf.setFontSize(8);
+      
+      // Ò³Ã¼£ºÎÄ¼şÃû×ó¶ÔÆë
+      pdf.text(displayName, 10, 8);
+      
+      // Ò³Ã¼£ºÒ³ÂëÓÒ¶ÔÆë
+      const pageText = `${page} / ${totalPages}`;
+      const pageTextWidth = pdf.getTextWidth(pageText);
+      pdf.text(pageText, pdfWidth - 10 - pageTextWidth, 8);
+      
+      // Ò³Ã¼·Ö¸ôÏß
+      pdf.setDrawColor(200, 200, 200);
+      pdf.setLineWidth(0.3);
+      pdf.line(10, headerHeight, pdfWidth - 10, headerHeight);
+      
+      // Ò³½Å£ºÒ³Âë¾ÓÖĞ
+      const footerText = `µÚ ${page} Ò³ / ¹² ${totalPages} Ò³`;
+      const footerTextWidth = pdf.getTextWidth(footerText);
+      pdf.text(footerText, (pdfWidth - footerTextWidth) / 2, pdfHeight - 5);
+      
+      // Ò³½Å·Ö¸ôÏß
+      pdf.line(10, pdfHeight - footerHeight, pdfWidth - 10, pdfHeight - footerHeight);
+      
+      // »Ö¸´ºÚÉ«
+      pdf.setTextColor(0, 0, 0);
+    };
+
+    // ÎªµÚÒ»Ò³Ìí¼ÓÒ³Ã¼Ò³½Å
+    addHeaderFooter(1);
+
+    // ÎªºóĞøÒ³ÃæÌí¼ÓÄÚÈİºÍÒ³Ã¼Ò³½Å
+    while (heightLeft > 0) {
+      currentPage++;
+      position = heightLeft - imgHeight + marginTop;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      addHeaderFooter(currentPage);
+      heightLeft -= contentAreaHeight;
+    }
+
+    // Ìí¼Ó PDF ÊéÇ©£¨Ä¿Â¼½á¹¹£©
+    if (headings.length > 0) {
+      // ÎªÃ¿¸ö±êÌâÌí¼ÓÊéÇ©£¬¸ù¾İ±êÌâÊıÁ¿¾ùÔÈ·ÖÅäµ½Ò³Ãæ
+      const headingsPerPage = Math.ceil(headings.length / totalPages);
+      
+      // ¸ú×Ù¸÷²ã¼¶µÄ×îºóÒ»¸öÊéÇ©£¬ÓÃÓÚ´´½¨²ã¼¶½á¹¹
+      const levelBookmarks: Record<number, any> = { 0: bookmarkRoot };
+      
+      headings.forEach((heading, index) => {
+        const targetPage = Math.min(Math.floor(index / headingsPerPage) + 1, totalPages);
+        
+        try {
+          // ÕÒµ½¸¸¼¶ÊéÇ©£¨ÉÏÒ»²ã¼¶µÄ×îºóÒ»¸öÊéÇ©£©
+          let parent = bookmarkRoot;
+          for (let lvl = heading.level - 1; lvl >= 1; lvl--) {
+            if (levelBookmarks[lvl]) {
+              parent = levelBookmarks[lvl];
+              break;
+            }
+          }
+          
+          // Ìí¼ÓÊéÇ©
+          const bookmark = pdf.outline.add(parent, heading.text, { pageNumber: targetPage });
+          
+          // ¸üĞÂµ±Ç°²ã¼¶µÄÊéÇ©ÒıÓÃ
+          levelBookmarks[heading.level] = bookmark;
+          
+          // Çå³ı¸üÉî²ã¼¶µÄÒıÓÃ£¨ĞÂµÄÍ¬¼¶±êÌâ£©
+          for (let lvl = heading.level + 1; lvl <= 6; lvl++) {
+            delete levelBookmarks[lvl];
+          }
+        } catch {
+          // Èç¹ûÊéÇ©´´½¨Ê§°Ü£¬Ìø¹ı
+        }
+      });
+    }
+
+    // ±£´æÎÄ¼ş
     const pdfData = pdf.output('arraybuffer');
     await writeFile(filePath, new Uint8Array(pdfData));
   } catch (err) {
@@ -57,31 +187,32 @@ export async function exportToPdf(
 }
 
 /**
- * å¯¼å‡ºé¢„è§ˆåŒºåŸŸä¸º PNG å›¾ç‰‡
+ * µ¼³öÔ¤ÀÀÇøÓòÎª PNG Í¼Æ¬£¬Ö§³Ö×Ô¶¨Òå·Ö±æÂÊ
  */
 export async function exportToImage(
   element: HTMLElement,
   filename: string = 'document.png',
-  defaultPath?: string
+  defaultPath?: string,
+  scale: number = 2
 ): Promise<void> {
   try {
-    // æ˜¾ç¤ºä¿å­˜å¯¹è¯æ¡†
+    // ÏÔÊ¾±£´æ¶Ô»°¿ò
     const filePath = await save({
       defaultPath: defaultPath ? `${defaultPath}\\${filename}` : filename,
       filters: [{ name: 'PNG Images', extensions: ['png'] }],
     });
     if (!filePath) return;
 
-    // ç”Ÿæˆ Canvas
+    // Éú³É Canvas£¬Ê¹ÓÃ´«ÈëµÄ scale ²ÎÊı
     const canvas = await html2canvas(element, {
-      scale: 2,
+      scale: scale,
       useCORS: true,
       backgroundColor:
         getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim() ||
         '#ffffff',
     });
 
-    // è½¬æ¢ä¸º Blob
+    // ×ª»»Îª Blob
     const blob = await new Promise<Blob>((resolve) => {
       canvas.toBlob(
         (blob) => {
@@ -91,7 +222,7 @@ export async function exportToImage(
       );
     });
 
-    // ä¿å­˜æ–‡ä»¶
+    // ±£´æÎÄ¼ş
     const arrayBuffer = await blob.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
     await writeFile(filePath, uint8Array);
@@ -100,3 +231,4 @@ export async function exportToImage(
     throw err;
   }
 }
+

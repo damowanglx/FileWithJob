@@ -1,15 +1,18 @@
-ï»¿import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useFileTree, FileNode } from '../../hooks/useFileTree';
 import { FileTreeNode } from './FileTreeNode';
+import { FileInfoDialog } from '../FileInfo/FileInfoDialog';
 
 interface FileTreeProps {
   onFileSelect: (path: string) => void;
   isOpen: boolean;
   onToggle: () => void;
+  onRootPathChange?: (path: string | null) => void;
+  initialRootPath?: string | null;
 }
 
-export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
+export function FileTree({ onFileSelect, isOpen, onToggle, onRootPathChange, initialRootPath }: FileTreeProps) {
   const {
     tree,
     selectedPath,
@@ -19,10 +22,9 @@ export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
     toggleExpand,
     selectFile,
     refresh,
-
     deleteItem,
     renameItem,
-  } = useFileTree({ onFileSelect });
+  } = useFileTree({ onFileSelect, rootPath: initialRootPath || undefined });
 
   const [isCreating, setIsCreating] = useState<'file' | 'folder' | null>(null);
   void isCreating; // Used in JSX below
@@ -32,17 +34,24 @@ export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
     node: FileNode | null;
   } | null>(null);
 
-
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // ÎÄ¼şÊôĞÔ¶Ô»°¿ò×´Ì¬
+  const [fileInfoPath, setFileInfoPath] = useState<string | null>(null);
+
+  // Notify parent when rootFolderPath changes
+  useEffect(() => {
+    onRootPathChange?.(rootFolderPath);
+  }, [rootFolderPath, onRootPathChange]);
 
   const handleOpenFolder = useCallback(async () => {
     try {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: 'é€‰æ‹©æ–‡ä»¶å¤¹',
+        title: 'Ñ¡ÔñÎÄ¼ş¼Ğ',
       });
       if (selected) {
         await loadRoot(selected as string);
@@ -66,7 +75,7 @@ export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
 
   const handleDelete = useCallback(async () => {
     if (!contextMenu?.node) return;
-    const confirmed = window.confirm(`ç¡®å®šè¦åˆ é™¤ "${contextMenu.node.name}" å—ï¼Ÿ`);
+    const confirmed = window.confirm(`È·¶¨ÒªÉ¾³ı "${contextMenu.node.name}" Âğ£¿`);
     if (!confirmed) return;
     try {
       await deleteItem(contextMenu.node.path);
@@ -98,6 +107,13 @@ export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
     }
   }, [renamingPath, renameValue, renameItem]);
 
+  // ´ò¿ªÎÄ¼şÊôĞÔ¶Ô»°¿ò
+  const handleShowFileInfo = useCallback(() => {
+    if (!contextMenu?.node) return;
+    setFileInfoPath(contextMenu.node.path);
+    handleCloseContextMenu();
+  }, [contextMenu, handleCloseContextMenu]);
+
   if (!isOpen) return null;
 
   return (
@@ -116,29 +132,29 @@ export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
         style={{ borderColor: 'var(--border-color)' }}
       >
         <span className="text-sm font-medium text-[var(--text-primary)]">
-          ğŸ“ æ–‡ä»¶æµè§ˆå™¨
+          ?? ÎÄ¼şä¯ÀÀÆ÷
         </span>
         <div className="flex items-center gap-1">
           <button
             onClick={handleOpenFolder}
             className="p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-secondary)]"
-            title="æ‰“å¼€æ–‡ä»¶å¤¹"
+            title="´ò¿ªÎÄ¼ş¼Ğ"
           >
-            ğŸ“‚
+            ??
           </button>
           <button
             onClick={refresh}
             className="p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-secondary)]"
-            title="åˆ·æ–°"
+            title="Ë¢ĞÂ"
           >
-            ğŸ”„
+            ??
           </button>
           <button
             onClick={onToggle}
             className="p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-secondary)]"
-            title="å…³é—­"
+            title="¹Ø±Õ"
           >
-            âœ•
+            ?
           </button>
         </div>
       </div>
@@ -159,31 +175,31 @@ export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
       >
         {isLoading && (
           <div className="flex items-center justify-center py-8 text-[var(--text-secondary)]">
-            <span className="animate-spin mr-2">â³</span>
-            åŠ è½½ä¸­...
+            <span className="animate-spin mr-2">?</span>
+            ¼ÓÔØÖĞ...
           </div>
         )}
 
         {!isLoading && tree.length === 0 && !rootFolderPath && (
           <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-            <span className="text-4xl mb-3">ğŸ“‚</span>
+            <span className="text-4xl mb-3">??</span>
             <p className="text-sm text-[var(--text-secondary)] mb-4">
-              è¿˜æ²¡æœ‰æ‰“å¼€æ–‡ä»¶å¤¹
+              »¹Ã»ÓĞ´ò¿ªÎÄ¼ş¼Ğ
             </p>
             <button
               onClick={handleOpenFolder}
               className="px-4 py-2 text-sm rounded-lg bg-[var(--accent-color)] text-white hover:opacity-90"
             >
-              æ‰“å¼€æ–‡ä»¶å¤¹
+              ´ò¿ªÎÄ¼ş¼Ğ
             </button>
           </div>
         )}
 
         {!isLoading && tree.length === 0 && rootFolderPath && (
           <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-            <span className="text-4xl mb-3">ğŸ“­</span>
+            <span className="text-4xl mb-3">??</span>
             <p className="text-sm text-[var(--text-secondary)]">
-              æ–‡ä»¶å¤¹ä¸ºç©º
+              ÎÄ¼ş¼ĞÎª¿Õ
             </p>
           </div>
         )}
@@ -207,7 +223,7 @@ export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
           style={{ borderColor: 'var(--border-color)' }}
         >
           <div className="flex items-center gap-2">
-            <span className="text-sm">âœï¸</span>
+            <span className="text-sm">??</span>
             <input
               ref={inputRef}
               type="text"
@@ -228,7 +244,7 @@ export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
               onClick={handleConfirmRename}
               className="px-2 py-1 text-xs rounded bg-[var(--accent-color)] text-white"
             >
-              ç¡®å®š
+              È·¶¨
             </button>
           </div>
         </div>
@@ -252,7 +268,7 @@ export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
                 }}
                 className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--bg-hover)] text-[var(--text-primary)]"
               >
-                ğŸ“„ æ–°å»ºæ–‡ä»¶
+                ?? ĞÂ½¨ÎÄ¼ş
               </button>
               <button
                 onClick={() => {
@@ -261,7 +277,7 @@ export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
                 }}
                 className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--bg-hover)] text-[var(--text-primary)]"
               >
-                ğŸ“ æ–°å»ºæ–‡ä»¶å¤¹
+                ?? ĞÂ½¨ÎÄ¼ş¼Ğ
               </button>
               <div className="border-t my-1" style={{ borderColor: 'var(--border-color)' }} />
             </>
@@ -270,22 +286,30 @@ export function FileTree({ onFileSelect, isOpen, onToggle }: FileTreeProps) {
             onClick={handleRename}
             className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--bg-hover)] text-[var(--text-primary)]"
           >
-            âœï¸ é‡å‘½å
+            ?? ÖØÃüÃû
           </button>
+          <button
+            onClick={handleShowFileInfo}
+            className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--bg-hover)] text-[var(--text-primary)]"
+          >
+            ?? ÎÄ¼şÊôĞÔ
+          </button>
+          <div className="border-t my-1" style={{ borderColor: 'var(--border-color)' }} />
           <button
             onClick={handleDelete}
             className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--bg-hover)] text-red-500"
           >
-            ğŸ—‘ï¸ åˆ é™¤
+            ??? É¾³ı
           </button>
         </div>
       )}
+
+      {/* ÎÄ¼şÊôĞÔ¶Ô»°¿ò */}
+      <FileInfoDialog
+        isOpen={!!fileInfoPath}
+        filePath={fileInfoPath}
+        onClose={() => setFileInfoPath(null)}
+      />
     </div>
   );
 }
-
-
-
-
-
-

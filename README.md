@@ -30,6 +30,17 @@
 - 🔄 关闭后自动恢复内容
 - 📱 响应式设计
 
+
+## 📸 功能截图
+
+> 截图待添加
+
+| 功能 | 截图 |
+|------|------|
+| 编辑器界面 | ![编辑器界面](./screenshot.png) |
+| 暗色主题 | ![暗色主题](./screenshot-dark.png) |
+| 导出功能 | ![导出功能](./screenshot-export.png) |
+
 ## 🛠️ 技术栈
 
 | 技术 | 说明 |
@@ -82,6 +93,11 @@ npm run tauri build
 | MSI 安装包 | `src-tauri/target/release/bundle/msi/` | 企业部署 |
 | 可执行文件 | `src-tauri/target/release/filewithjob.exe` | 绿色版 |
 
+
+## 🚀 开发环境搭建
+
+详细的开发环境搭建指南请参考 [开发环境搭建文档](./docs/development.md)。
+
 ## 🎯 快捷键
 
 | 快捷键 | 功能 |
@@ -89,14 +105,30 @@ npm run tauri build
 | `Ctrl + N` | 新建文件 |
 | `Ctrl + O` | 打开文件 |
 | `Ctrl + S` | 保存文件 |
-| `Ctrl + B` | 加粗 |
-| `Ctrl + I` | 斜体 |
+| `Ctrl + Shift + S` | 另存为 |
 | `Ctrl + Z` | 撤销 |
 | `Ctrl + Shift + Z` | 重做 |
+| `Ctrl + X` | 剪切 |
+| `Ctrl + C` | 复制 |
+| `Ctrl + V` | 粘贴 |
+| `Ctrl + A` | 全选 |
+| `Ctrl + F` | 查找 |
+| `Ctrl + H` | 替换 |
+| `Ctrl + B` | 加粗 |
+| `Ctrl + I` | 斜体 |
+| `Ctrl + P` | 切换预览 |
+| `Ctrl + \` | 切换侧边栏 |
+| `Ctrl + =` | 放大 |
+| `Ctrl + -` | 缩小 |
+| `Ctrl + 0` | 重置缩放 |
+| `Ctrl + W` | 关闭标签页 |
+| `Ctrl + T` | 新建标签页 |
+| `Ctrl + Tab` | 下一个标签页 |
+| `Ctrl + Shift + Tab` | 上一个标签页 |
+| `Ctrl + Shift + F` | 全屏预览 |
 | `Tab` | 向右缩进 |
 | `Shift + Tab` | 向左缩进 |
 
-## 🎨 主题
 
 支持亮色和暗色两种主题，点击工具栏右侧的 🌙 按钮切换。
 
@@ -155,15 +187,11 @@ FileWithJob/
 └── CLAUDE.md                       # 项目说明文档
 ```
 
+
 ## 🤝 贡献
 
-欢迎提交 Issue 和 Pull Request！
+详细的贡献指南请参考 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
-1. Fork 本仓库
-2. 创建特性分支：`git checkout -b feature/your-feature`
-3. 提交更改：`git commit -m 'feat: 添加某功能'`
-4. 推送分支：`git push origin feature/your-feature`
-5. 提交 Pull Request
 
 ## 📄 许可证
 
@@ -175,3 +203,8 @@ MIT License
 - [CodeMirror](https://codemirror.net/) - 强大的代码编辑器
 - [marked](https://github.com/markedjs/marked) - 快速的 Markdown 解析器
 - [highlight.js](https://highlightjs.org/) - 代码语法高亮库
+
+
+
+
+

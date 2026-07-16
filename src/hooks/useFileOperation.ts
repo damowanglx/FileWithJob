@@ -6,6 +6,17 @@ export interface DirEntry {
   is_dir: boolean;
 }
 
+export interface DetailedFileInfo {
+  name: string;
+  path: string;
+  extension: string;
+  is_dir: boolean;
+  size: number;
+  created: number;
+  modified: number;
+  readonly: boolean;
+}
+
 /**
  * Read file content
  */
@@ -39,4 +50,18 @@ export async function createFile(path: string): Promise<void> {
  */
 export async function pathExists(path: string): Promise<boolean> {
   return invoke<boolean>("path_exists", { path });
+}
+
+/**
+ * Check if a file is binary
+ */
+export async function isBinaryFile(path: string): Promise<boolean> {
+  return invoke<boolean>("is_binary_file", { path });
+}
+
+/**
+ * Get detailed file info (name, path, extension, size, created, modified, readonly)
+ */
+export async function getFileInfo(path: string): Promise<DetailedFileInfo> {
+  return invoke<DetailedFileInfo>("get_file_info", { path });
 }

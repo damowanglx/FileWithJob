@@ -1,43 +1,43 @@
-ï»¿import { useState, useCallback } from 'react';
-import { open, save, ask } from '@tauri-apps/plugin-dialog';
-import { readFile, writeFile } from './useFileOperation';
+import { useState, useCallback } from 'react';
+import { open, save, ask, confirm } from '@tauri-apps/plugin-dialog';
+import { readFile, writeFile, isBinaryFile } from './useFileOperation';
 import { useNotifications } from './useNotifications';
 import { useFileType, createFileFilters } from './useFileType';
 import { useSettings } from './useSettings';
 import { exportToPdf, exportToImage } from '../utils/export';
 
 /**
- * ç®¡ç†æ–‡ä»¶æ“ä½œçš„ Hook
+ * ¹ÜÀíÎÄ¼ş²Ù×÷µÄ Hook
  */
 export function useFileActions() {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [isModified, setIsModified] = useState(false);
   const [content, setContent] = useState('');
-  const { success, error } = useNotifications();
+  const { success, error, warning } = useNotifications();
   const { currentFileType, detectFileType } = useFileType();
   const { settings } = useSettings();
 
-  // æ ‡è®°ä¸ºå·²ä¿®æ”¹
+  // ±ê¼ÇÎªÒÑĞŞ¸Ä
   const markModified = useCallback(() => {
     setIsModified(true);
   }, []);
 
-  // æ›´æ–°å†…å®¹
+  // ¸üĞÂÄÚÈİ
   const updateContent = useCallback((newContent: string) => {
     setContent(newContent);
     setIsModified(true);
   }, []);
 
-  // ç¡®è®¤ä¸¢å¼ƒæœªä¿å­˜çš„æ›´æ”¹
+  // È·ÈÏ¶ªÆúÎ´±£´æµÄ¸ü¸Ä
   const confirmDiscard = useCallback(async (): Promise<boolean> => {
     if (!isModified) return true;
-    return await ask('å½“å‰æ–‡ä»¶æœªä¿å­˜ï¼Œæ˜¯å¦æ”¾å¼ƒæ›´æ”¹ï¼Ÿ', {
-      title: 'æœªä¿å­˜çš„æ›´æ”¹',
+    return await ask('µ±Ç°ÎÄ¼şÎ´±£´æ£¬ÊÇ·ñ·ÅÆú¸ü¸Ä£¿', {
+      title: 'Î´±£´æµÄ¸ü¸Ä',
       kind: 'warning',
     });
   }, [isModified]);
 
-  // æ–°å»ºæ–‡ä»¶
+  // ĞÂ½¨ÎÄ¼ş
   const handleNewFile = useCallback(async () => {
     const canProceed = await confirmDiscard();
     if (!canProceed) return;
@@ -48,7 +48,7 @@ export function useFileActions() {
     detectFileType('');
   }, [confirmDiscard, detectFileType]);
 
-  // æ‰“å¼€æ–‡ä»¶
+  // ´ò¿ªÎÄ¼ş£¨´ø¶ş½øÖÆ¼ì²â£©
   const handleOpenFile = useCallback(async () => {
     const canProceed = await confirmDiscard();
     if (!canProceed) return;
@@ -62,91 +62,129 @@ export function useFileActions() {
 
       if (selected) {
         const path = typeof selected === 'string' ? selected : String(selected);
+        
+        // ¼ì²âÊÇ·ñÎª¶ş½øÖÆÎÄ¼ş
+        const isBinary = await isBinaryFile(path);
+        if (isBinary) {
+          const forceOpen = await confirm(
+            'ÕâÊÇÒ»¸ö¶ş½øÖÆÎÄ¼ş£¬ÎŞ·¨ÒÔÎÄ±¾·½Ê½±à¼­¡£\n\nÊÇ·ñÇ¿ÖÆ´ò¿ª£¿£¨½«ÒÔÊ®Áù½øÖÆÏÔÊ¾£©',
+            {
+              title: '¶ş½øÖÆÎÄ¼ş',
+              kind: 'warning',
+              okLabel: 'Ç¿ÖÆ´ò¿ª',
+              cancelLabel: 'È¡Ïû',
+            }
+          );
+          
+          if (!forceOpen) return;
+          
+          // Ç¿ÖÆ´ò¿ª¶ş½øÖÆÎÄ¼ş£¬¶ÁÈ¡Ô­Ê¼×Ö½Ú²¢×ªÎªÊ®Áù½øÖÆÏÔÊ¾
+          try {
+            const rawContent = await readFile(path);
+            const hexContent = Array.from(rawContent)
+              .map((char) => char.charCodeAt(0).toString(16).padStart(2, '0'))
+              .reduce((acc, hex, i) => {
+                if (i > 0 && i % 16 === 0) acc += '\n';
+                if (i > 0 && i % 2 === 0) acc += ' ';
+                return acc + hex;
+              }, '');
+            setContent(hexContent);
+            setFilePath(path);
+            setIsModified(false);
+            detectFileType(path);
+            warning('¶ş½øÖÆÎÄ¼şÒÑ´ò¿ª', 'ÒÔÊ®Áù½øÖÆÏÔÊ¾£¬±à¼­ºó±£´æ¿ÉÄÜËğ»µÎÄ¼ş');
+          } catch (readErr) {
+            error('¶ÁÈ¡ÎÄ¼şÊ§°Ü', String(readErr));
+          }
+          return;
+        }
+        
+        // Õı³£´ò¿ªÎÄ±¾ÎÄ¼ş
         const fileContent = await readFile(path);
         setContent(fileContent);
         setFilePath(path);
         setIsModified(false);
         detectFileType(path);
-        success('æ–‡ä»¶å·²æ‰“å¼€', path.split(/[\/\\]/).pop() || '');
+        success('ÎÄ¼şÒÑ´ò¿ª', path.split(/[\/\\]/).pop() || '');
       }
     } catch (err) {
-      error('æ‰“å¼€æ–‡ä»¶å¤±è´¥', String(err));
+      error('´ò¿ªÎÄ¼şÊ§°Ü', String(err));
     }
-  }, [confirmDiscard, detectFileType, success, error]);
+  }, [confirmDiscard, detectFileType, success, error, warning]);
 
-  // ä¿å­˜æ–‡ä»¶
+  // ±£´æÎÄ¼ş
   const handleSaveFile = useCallback(async (): Promise<boolean> => {
     try {
       if (filePath) {
         await writeFile(filePath, content);
         setIsModified(false);
-        success('ä¿å­˜æˆåŠŸ', filePath.split(/[\/\\]/).pop() || '');
+        success('±£´æ³É¹¦', filePath.split(/[\/\\]/).pop() || '');
         return true;
       } else {
-        // å¦å­˜ä¸º - ä½¿ç”¨è®¾ç½®ä¸­çš„é»˜è®¤è·¯å¾„
+        // Áí´æÎª - Ê¹ÓÃÉèÖÃÖĞµÄÄ¬ÈÏÂ·¾¶
         const filters = createFileFilters();
         const defaultPath = settings.defaultSavePath || undefined;
         const path = await save({ 
           filters,
-          defaultPath: defaultPath ? `${defaultPath}\\æœªå‘½å.md` : undefined,
+          defaultPath: defaultPath ? `${defaultPath}\\Î´ÃüÃû.md` : undefined,
         });
         if (path) {
           await writeFile(path, content);
           setFilePath(path);
           setIsModified(false);
           detectFileType(path);
-          success('ä¿å­˜æˆåŠŸ', path.split(/[\/\\]/).pop() || '');
+          success('±£´æ³É¹¦', path.split(/[\/\\]/).pop() || '');
           return true;
         }
         return false;
       }
     } catch (err) {
-      error('ä¿å­˜å¤±è´¥', String(err));
+      error('±£´æÊ§°Ü', String(err));
       return false;
     }
   }, [filePath, content, detectFileType, success, error, settings.defaultSavePath]);
 
-  // å¯¼å‡ºä¸º PDF
+  // µ¼³öÎª PDF
   const handleExportPdf = useCallback(async (previewElement?: HTMLElement | null) => {
     if (!previewElement) {
-      error('å¯¼å‡ºå¤±è´¥', 'é¢„è§ˆåŒºåŸŸæœªå°±ç»ªï¼Œè¯·ç¡®ä¿é¢„è§ˆé¢æ¿å·²æ‰“å¼€');
+      error('µ¼³öÊ§°Ü', 'Ô¤ÀÀÇøÓòÎ´¾ÍĞ÷£¬ÇëÈ·±£Ô¤ÀÀÃæ°åÒÑ´ò¿ª');
       return;
     }
     
     const baseName = filePath
       ? filePath.split(/[\/\\]/).pop()!.replace(/\.(md|markdown|html|json|txt)$/i, '')
-      : 'æ–‡æ¡£';
+      : 'ÎÄµµ';
     
     try {
       const defaultPath = settings.defaultExportPath || undefined;
-      await exportToPdf(previewElement, `${baseName}.pdf`, defaultPath);
-      success('å¯¼å‡ºæˆåŠŸ', `å·²å¯¼å‡ºä¸º ${baseName}.pdf`);
+      await exportToPdf(previewElement, `${baseName}.pdf`, defaultPath, content);
+      success('µ¼³ö³É¹¦', `ÒÑµ¼³öÎª ${baseName}.pdf`);
     } catch (err) {
-      error('å¯¼å‡ºå¤±è´¥', String(err));
+      error('µ¼³öÊ§°Ü', String(err));
     }
-  }, [filePath, success, error, settings.defaultExportPath]);
+  }, [filePath, content, success, error, settings.defaultExportPath]);
 
-  // å¯¼å‡ºä¸ºå›¾ç‰‡
-  const handleExportImage = useCallback(async (previewElement?: HTMLElement | null) => {
+  // µ¼³öÎªÍ¼Æ¬
+  const handleExportImage = useCallback(async (previewElement?: HTMLElement | null, scale: number = 2) => {
     if (!previewElement) {
-      error('å¯¼å‡ºå¤±è´¥', 'é¢„è§ˆåŒºåŸŸæœªå°±ç»ªï¼Œè¯·ç¡®ä¿é¢„è§ˆé¢æ¿å·²æ‰“å¼€');
+      error('µ¼³öÊ§°Ü', 'Ô¤ÀÀÇøÓòÎ´¾ÍĞ÷£¬ÇëÈ·±£Ô¤ÀÀÃæ°åÒÑ´ò¿ª');
       return;
     }
     
     const baseName = filePath
       ? filePath.split(/[\/\\]/).pop()!.replace(/\.(md|markdown|html|json|txt)$/i, '')
-      : 'æ–‡æ¡£';
+      : 'ÎÄµµ';
     
     try {
       const defaultPath = settings.defaultExportPath || undefined;
-      await exportToImage(previewElement, `${baseName}.png`, defaultPath);
-      success('å¯¼å‡ºæˆåŠŸ', `å·²å¯¼å‡ºä¸º ${baseName}.png`);
+      await exportToImage(previewElement, `${baseName}.png`, defaultPath, scale);
+      success('µ¼³ö³É¹¦', `ÒÑµ¼³öÎª ${baseName}.png (${scale}x)`);
     } catch (err) {
-      error('å¯¼å‡ºå¤±è´¥', String(err));
+      error('µ¼³öÊ§°Ü', String(err));
     }
   }, [filePath, success, error, settings.defaultExportPath]);
 
-  // åŠ è½½æ–‡ä»¶å†…å®¹
+  // ¼ÓÔØÎÄ¼şÄÚÈİ
   const loadContent = useCallback((newContent: string, newPath?: string | null) => {
     setContent(newContent);
     if (newPath !== undefined) {

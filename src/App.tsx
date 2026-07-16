@@ -122,6 +122,9 @@ function App() {
     isDragging: false,
   });
 
+  // Fullscreen preview state
+  const [isFullscreenPreview, setIsFullscreenPreview] = useState(false);
+
   const editorViewRef = useRef<any>(null);
   const editorScrollRef = useRef<HTMLDivElement>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
@@ -260,6 +263,11 @@ function App() {
     updateSetting('showPreview', !settings.showPreview);
   }, [settings.showPreview, updateSetting]);
 
+  // Toggle fullscreen preview
+  const toggleFullscreenPreview = useCallback(() => {
+    setIsFullscreenPreview((prev) => !prev);
+  }, []);
+
   // 快捷键配置
   useKeyboardShortcuts({
     [SHORTCUTS.NEW_FILE]: handleNewFile,
@@ -268,6 +276,8 @@ function App() {
     [SHORTCUTS.BOLD]: () => handleInsertMarkdown('**', '**'),
     [SHORTCUTS.ITALIC]: () => handleInsertMarkdown('*', '*'),
     [SHORTCUTS.TOGGLE_PREVIEW]: handleTogglePreview,
+    [SHORTCUTS.FULLSCREEN_PREVIEW]: toggleFullscreenPreview,
+    'Escape': () => { if (isFullscreenPreview) setIsFullscreenPreview(false); },
   });
 
   // 使用持久化 Hook
@@ -556,10 +566,33 @@ function App() {
 
   // 是否显示预览
   const shouldShowPreview =
-    settings.showPreview && (!currentFileType || currentFileType.previewMode === 'markdown');
+    settings.showPreview && (!currentFileType || currentFileType.previewMode === 'markdown') && !isFullscreenPreview;
 
   return (
     <div className="flex flex-col h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {/* Fullscreen Preview Overlay */}
+      {isFullscreenPreview && (
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
+          <div className="absolute top-4 right-4 z-50 opacity-0 hover:opacity-100 transition-opacity duration-300">
+            <button
+              onClick={() => setIsFullscreenPreview(false)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg backdrop-blur-sm"
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', color: 'white' }}
+              title="Exit fullscreen (ESC)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+              </svg>
+              <span className="text-sm font-medium">Exit Fullscreen</span>
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8">
+            <Preview content={content} fileName={filePath || undefined} />
+          </div>
+        </div>
+      )}
+
+      {!isFullscreenPreview && (
       <Toolbar
         theme={theme}
         onToggleTheme={toggleTheme}
@@ -579,21 +612,24 @@ function App() {
         showFileTree={state.showFileTree}
         showToc={state.showToc}
         hasContent={content.length > 0}
+        isFullscreenPreview={isFullscreenPreview}
+        onToggleFullscreenPreview={toggleFullscreenPreview}
       />
+      )}
 
       {/* 标签栏 */}
-      <TabBar
+      {!isFullscreenPreview && <TabBar
         tabs={state.tabs}
         activeTabId={state.activeTabId}
         onTabSelect={handleTabSelect}
         onTabClose={handleTabClose}
         onNewTab={handleNewFile}
-      />
+      />}
 
       <ContextMenu items={contextMenuItems}>
         <div ref={containerRef} className="flex flex-1 overflow-hidden">
           {/* 文件树 */}
-          {state.showFileTree && (
+          {!isFullscreenPreview && state.showFileTree && (
             <FileTree
               onFileSelect={handleFileTreeSelect}
               isOpen={state.showFileTree}
@@ -687,7 +723,7 @@ function App() {
       </ContextMenu>
 
       {/* 搜索替换 */}
-      {state.showSearch && (
+      {state.showSearch && !isFullscreenPreview && (
         <SearchReplace
           onSearch={handleSearch}
           onReplace={handleReplace}
@@ -695,7 +731,7 @@ function App() {
         />
       )}
 
-      <StatusBar
+      {!isFullscreenPreview && <StatusBar
         charCount={charCount}
         wordCount={wordCount}
         lineCount={lineCount}
@@ -705,7 +741,7 @@ function App() {
         isModified={isModified}
         fileType={currentFileType?.name}
         fileSize={formatFileSize(fileSize)}
-      />
+      />}
 
       <Notifications notifications={notifications} onClose={removeNotification} />
 

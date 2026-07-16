@@ -1,4 +1,4 @@
-ï»¿import type { Theme } from '../../hooks/useTheme';
+import type { Theme } from '../../hooks/useTheme';
 import { FileToolbar } from '../FileToolbar/FileToolbar';
 import { FormatToolbar } from '../FormatToolbar/FormatToolbar';
 import { ExportToolbar } from '../ExportToolbar/ExportToolbar';
@@ -11,7 +11,7 @@ interface ToolbarProps {
   onOpenFile: () => void;
   onSaveFile: () => void;
   onExportPdf: () => void;
-  onExportImage: () => void;
+  onExportImage: (scale: number) => void;
   onInsertMarkdown: (before: string, after?: string) => void;
   onTogglePreview: () => void;
   onOpenMarkdownGuide: () => void;
@@ -23,6 +23,8 @@ interface ToolbarProps {
   showFileTree?: boolean;
   showToc?: boolean;
   hasContent: boolean;
+  isFullscreenPreview?: boolean;
+  onToggleFullscreenPreview?: () => void;
 }
 
 export function Toolbar({
@@ -44,6 +46,8 @@ export function Toolbar({
   showFileTree,
   showToc,
   hasContent,
+  isFullscreenPreview,
+  onToggleFullscreenPreview,
 }: ToolbarProps) {
   return (
     <div
@@ -68,33 +72,33 @@ export function Toolbar({
 
       <div className="flex-1" />
 
-      {/* è§†å›¾æ§åˆ¶æŒ‰é’® */}
+      {/* ÊÓÍ¼¿ØÖÆ°´Å¥ */}
       {onToggleFileTree && (
         <ToolbarButton
           onClick={onToggleFileTree}
-          title="æ–‡ä»¶æ ‘"
+          title="ÎÄ¼şÊ÷"
           active={showFileTree}
         >
-          ğŸ“
+          ??
         </ToolbarButton>
       )}
 
       {onToggleToc && (
         <ToolbarButton
           onClick={onToggleToc}
-          title="ç›®å½•"
+          title="Ä¿Â¼"
           active={showToc}
         >
-          ğŸ“‘
+          ??
         </ToolbarButton>
       )}
 
       {onToggleSearch && (
         <ToolbarButton
           onClick={onToggleSearch}
-          title="æœç´¢æ›¿æ¢ (Ctrl+H)"
+          title="ËÑË÷Ìæ»» (Ctrl+H)"
         >
-          ğŸ”
+          ??
         </ToolbarButton>
       )}
 
@@ -107,6 +111,18 @@ export function Toolbar({
         onOpenSettings={onOpenSettings}
       />
 
+      {/* Fullscreen Preview Button */}
+      {onToggleFullscreenPreview && (
+        <ToolbarButton
+          onClick={onToggleFullscreenPreview}
+          title="È«ÆÁÔ¤ÀÀ (Ctrl+Shift+F)"
+          active={isFullscreenPreview}
+        >
+          <FullscreenIcon />
+          <span className="text-xs">È«ÆÁ</span>
+        </ToolbarButton>
+      )}
+
       <ExportToolbar
         onExportPdf={onExportPdf}
         onExportImage={onExportImage}
@@ -117,7 +133,7 @@ export function Toolbar({
 
       <button
         onClick={onToggleTheme}
-        title="åˆ‡æ¢ä¸»é¢˜"
+        title="ÇĞ»»Ö÷Ìâ"
         className="flex items-center justify-center gap-0.5 px-1.5 py-1 rounded hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer transition-colors"
         style={{ color: 'var(--text-primary)' }}
       >
@@ -166,7 +182,7 @@ function SunIcon() {
       <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
       <line x1="1" y1="12" x2="3" y2="12" />
       <line x1="21" y1="12" x2="23" y2="12" />
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+      <line x2="5.64" y1="19.78" y2="18.36" />
       <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
     </svg>
   );
@@ -176,6 +192,14 @@ function MoonIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  );
+}
+
+function FullscreenIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
     </svg>
   );
 }

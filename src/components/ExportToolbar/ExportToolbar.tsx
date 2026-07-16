@@ -1,6 +1,8 @@
-ï»¿interface ExportToolbarProps {
+import { useState, useRef, useEffect } from 'react';
+
+interface ExportToolbarProps {
   onExportPdf: () => void;
-  onExportImage: () => void;
+  onExportImage: (scale: number) => void;
   hasContent: boolean;
 }
 
@@ -9,25 +11,79 @@ export function ExportToolbar({
   onExportImage,
   hasContent,
 }: ExportToolbarProps) {
+  const [showScaleMenu, setShowScaleMenu] = useState(false);
+  const [selectedScale, setSelectedScale] = useState(2);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // µã»÷Íâ²¿¹Ø±Õ²Ëµ¥
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowScaleMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleExportWithScale = (scale: number) => {
+    setSelectedScale(scale);
+    setShowScaleMenu(false);
+    onExportImage(scale);
+  };
+
+  const scaleOptions = [
+    { value: 1, label: '1x', desc: '±ê×¼·Ö±æÂÊ' },
+    { value: 2, label: '2x', desc: '¸ßÇå£¨ÍÆ¼ö£©' },
+    { value: 3, label: '3x', desc: '³¬¸ßÇå' },
+  ];
+
   return (
     <div className="flex items-center gap-1">
       <ToolbarButton
         onClick={onExportPdf}
-        title="å¯¼å‡ºä¸º PDF"
+        title="µ¼³öÎª PDF"
         disabled={!hasContent}
       >
         <PdfIcon />
         <span className="text-xs">PDF</span>
       </ToolbarButton>
 
-      <ToolbarButton
-        onClick={onExportImage}
-        title="å¯¼å‡ºä¸ºå›¾ç‰‡"
-        disabled={!hasContent}
-      >
-        <ExportImageIcon />
-        <span className="text-xs">å›¾ç‰‡</span>
-      </ToolbarButton>
+      <div className="relative" ref={menuRef}>
+        <ToolbarButton
+          onClick={() => setShowScaleMenu(!showScaleMenu)}
+          title={`µ¼³öÎªÍ¼Æ¬ (${selectedScale}x)`}
+          disabled={!hasContent}
+        >
+          <ExportImageIcon />
+          <span className="text-xs">Í¼Æ¬ {selectedScale}x</span>
+        </ToolbarButton>
+
+        {showScaleMenu && (
+          <div
+            className="absolute right-0 top-full mt-1 z-50 rounded-md shadow-lg border py-1 min-w-[140px]"
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderColor: 'var(--border-color)',
+            }}
+          >
+            {scaleOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => handleExportWithScale(option.value)}
+                className="w-full px-3 py-1.5 text-left text-sm flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                <span className="font-medium">{option.label}</span>
+                <span className="text-xs opacity-60">{option.desc}</span>
+                {selectedScale === option.value && (
+                  <span className="text-xs">?</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -78,3 +134,4 @@ function ExportImageIcon() {
     </svg>
   );
 }
+

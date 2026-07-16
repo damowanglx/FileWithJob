@@ -1,4 +1,4 @@
-ï»¿import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export interface RecentFile {
   path: string;
@@ -12,23 +12,58 @@ interface UseRecentFilesOptions {
   storageKey?: string;
 }
 
+/**
+ * ¸ñÊ½»¯×îºó´ò¿ªÊ±¼ä
+ */
+export function formatLastOpened(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (seconds < 60) return '¸Õ¸Õ';
+  if (minutes < 60) return `${minutes} ·ÖÖÓÇ°`;
+  if (hours < 24) return `${hours} Ð¡Ê±Ç°`;
+  if (days < 7) return `${days} ÌìÇ°`;
+
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+
+  if (year === new Date().getFullYear()) {
+    return `${month}-${day} ${hour}:${min}`;
+  }
+  return `${year}-${month}-${day} ${hour}:${min}`;
+}
+
 export function useRecentFiles(options: UseRecentFilesOptions = {}) {
-  const { maxItems = 20, storageKey = 'filewithjob_recent_files' } = options;
+  const { maxItems = 50, storageKey = 'filewithjob_recent_files' } = options;
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
 
-  // ä»Ž localStorage åŠ è½½
+  // ´Ó localStorage ¼ÓÔØ
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
-        setRecentFiles(JSON.parse(saved));
+        const parsed = JSON.parse(saved) as RecentFile[];
+        // ¼æÈÝ¾ÉÊý¾Ý£ºÈ·±£Ã¿¸öÎÄ¼þ¶¼ÓÐ lastOpened
+        const migrated = parsed.map((f) => ({
+          ...f,
+          lastOpened: f.lastOpened || Date.now(),
+        }));
+        setRecentFiles(migrated);
       }
     } catch {
       // Ignore
     }
   }, [storageKey]);
 
-  // ä¿å­˜åˆ° localStorage
+  // ±£´æµ½ localStorage
   useEffect(() => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(recentFiles));
@@ -37,7 +72,7 @@ export function useRecentFiles(options: UseRecentFilesOptions = {}) {
     }
   }, [recentFiles, storageKey]);
 
-  // æ·»åŠ æœ€è¿‘æ–‡ä»¶
+  // Ìí¼Ó×î½üÎÄ¼þ
   const addRecentFile = useCallback(
     (path: string, name: string) => {
       setRecentFiles((prev) => {
@@ -56,12 +91,12 @@ export function useRecentFiles(options: UseRecentFilesOptions = {}) {
     [maxItems]
   );
 
-  // ç§»é™¤æœ€è¿‘æ–‡ä»¶
+  // ÒÆ³ý×î½üÎÄ¼þ
   const removeRecentFile = useCallback((path: string) => {
     setRecentFiles((prev) => prev.filter((f) => f.path !== path));
   }, []);
 
-  // åˆ‡æ¢ç½®é¡¶
+  // ÇÐ»»ÖÃ¶¥
   const togglePin = useCallback((path: string) => {
     setRecentFiles((prev) =>
       prev.map((f) =>
@@ -70,12 +105,12 @@ export function useRecentFiles(options: UseRecentFilesOptions = {}) {
     );
   }, []);
 
-  // æ¸…é™¤æ‰€æœ‰
+  // Çå³ýËùÓÐ¼ÇÂ¼
   const clearRecentFiles = useCallback(() => {
     setRecentFiles([]);
   }, []);
 
-  // æŽ’åºåŽçš„æ–‡ä»¶åˆ—è¡¨ï¼ˆç½®é¡¶ä¼˜å…ˆï¼‰
+  // ÅÅÐòºóµÄÎÄ¼þÁÐ±í£¨ÖÃ¶¥ÓÅÏÈ£¬È»ºó°´Ê±¼ä½µÐò£©
   const sortedFiles = [...recentFiles].sort((a, b) => {
     if (a.isPinned && !b.isPinned) return -1;
     if (!a.isPinned && b.isPinned) return 1;
@@ -88,5 +123,6 @@ export function useRecentFiles(options: UseRecentFilesOptions = {}) {
     removeRecentFile,
     togglePin,
     clearRecentFiles,
+    formatLastOpened,
   };
 }

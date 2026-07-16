@@ -1,9 +1,9 @@
-ï»¿import { forwardRef, useRef, useEffect, useMemo } from 'react';
+import { forwardRef, useRef, useEffect, useMemo } from 'react';
 import { marked } from 'marked';
 import hljs from 'highlight.js/lib/core';
 import katex from 'katex';
 
-// æŒ‰éœ€å¼•å…¥å¸¸ç”¨è¯­è¨€
+// °´ĞèÒıÈë³£ÓÃÓïÑÔ
 import javascript from 'highlight.js/lib/languages/javascript';
 import typescript from 'highlight.js/lib/languages/typescript';
 import python from 'highlight.js/lib/languages/python';
@@ -20,7 +20,7 @@ import sql from 'highlight.js/lib/languages/sql';
 import markdownLang from 'highlight.js/lib/languages/markdown';
 import dockerfile from 'highlight.js/lib/languages/dockerfile';
 
-// æ³¨å†Œè¯­è¨€
+// ×¢²áÓïÑÔ
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('typescript', typescript);
 hljs.registerLanguage('python', python);
@@ -74,9 +74,9 @@ function formatJson(content: string): string {
   }
 }
 
-// å¤„ç†æ•°å­¦å…¬å¼
+// ´¦ÀíÊıÑ§¹«Ê½
 function processMath(content: string): string {
-  // å¤„ç†å—çº§å…¬å¼ $$...$$ 
+  // ´¦Àí¿é¼¶¹«Ê½ $$...$$ 
   content = content.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
     try {
       return `<div class="math-block">${katex.renderToString(math.trim(), { displayMode: true, throwOnError: false })}</div>`;
@@ -85,7 +85,7 @@ function processMath(content: string): string {
     }
   });
 
-  // å¤„ç†è¡Œå†…å…¬å¼ $...$
+  // ´¦ÀíĞĞÄÚ¹«Ê½ $...$
   content = content.replace(/\$([^\$\n]+?)\$/g, (_, math) => {
     try {
       return katex.renderToString(math.trim(), { displayMode: false, throwOnError: false });
@@ -97,10 +97,10 @@ function processMath(content: string): string {
   return content;
 }
 
-// è‡ªå®šä¹‰æ¸²æŸ“å™¨
+// ×Ô¶¨ÒåäÖÈ¾Æ÷
 const renderer = new marked.Renderer();
 
-// é…ç½® marked
+// ÅäÖÃ marked
 marked.setOptions({
   gfm: true,
   breaks: true,
@@ -119,7 +119,7 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(
       }
     }, [ref]);
 
-    // æ¸²æŸ“ Mermaid å›¾è¡¨
+    // äÖÈ¾ Mermaid Í¼±í
     useEffect(() => {
       const renderMermaid = async () => {
         if (!previewRef.current) return;
@@ -146,7 +146,7 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(
               const { svg } = await mermaid.render(`mermaid-${Date.now()}`, block.textContent || '');
               container.innerHTML = svg;
             } catch {
-              container.innerHTML = `<div class="mermaid-error">å›¾è¡¨æ¸²æŸ“é”™è¯¯</div>`;
+              container.innerHTML = `<div class="mermaid-error">Í¼±íäÖÈ¾´íÎó</div>`;
             }
           }
         } catch {
@@ -170,12 +170,12 @@ export const Preview = forwardRef<PreviewRef, PreviewProps>(
         
         case 'markdown':
           try {
-            // å…ˆå¤„ç†æ•°å­¦å…¬å¼
+            // ÏÈ´¦ÀíÊıÑ§¹«Ê½
             const withMath = processMath(content);
-            // ä½¿ç”¨ marked çš„ highlight é€‰é¡¹
+            // Ê¹ÓÃ marked µÄ highlight Ñ¡Ïî
             return marked.parse(withMath) as string;
           } catch {
-            return `<p style="color: red;">Markdown è§£æé”™è¯¯</p>`;
+            return `<p style="color: red;">Markdown ½âÎö´íÎó</p>`;
           }
         
         default:

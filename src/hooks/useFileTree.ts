@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect } from 'react';
+﻿import { useState, useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
 export interface FileNode {
@@ -17,14 +17,78 @@ interface UseFileTreeOptions {
   onFileSelect?: (path: string) => void;
 }
 
+/**
+ * Check if a filename matches a gitignore pattern.
+ * Supports basic patterns: exact name, directory name, simple wildcards (*, **).
+ */
+function matchesGitignorePattern(name: string, isDir: boolean, pattern: string): boolean {
+  // Normalize: remove trailing slash (it indicates directory in gitignore, but we check isDir separately)
+  let p = pattern;
+  const patternIsDir = p.endsWith('/');
+  if (patternIsDir) {
+    p = p.slice(0, -1);
+  }
+
+  // If pattern specifies a directory (has trailing /) but item is not a dir, skip
+  if (patternIsDir && !isDir) {
+    return false;
+  }
+
+  // Exact match
+  if (p === name) return true;
+
+  // Pattern contains wildcard
+  if (p.includes('*')) {
+    // Convert glob to regex
+    const regexStr = '^' + p
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&') // escape special regex chars except * and ?
+      .replace(/\*\*/g, '{{DOUBLE_STAR}}')
+      .replace(/\*/g, '[^/]*')
+      .replace(/\?/g, '[^/]')
+      .replace(/\{\{DOUBLE_STAR\}\}/g, '.*')
+      + '$';
+    try {
+      const regex = new RegExp(regexStr);
+      return regex.test(name);
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+function shouldIgnore(name: string, isDir: boolean, patterns: string[]): boolean {
+  for (const pattern of patterns) {
+    // Skip negation patterns for now (they re-include)
+    if (pattern.startsWith('!')) continue;
+    
+    if (matchesGitignorePattern(name, isDir, pattern)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function useFileTree(options: UseFileTreeOptions = {}) {
   const { rootPath, onFileSelect } = options;
   const [tree, setTree] = useState<FileNode[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [rootFolderPath, setRootFolderPath] = useState<string | null>(rootPath || null);
   const [isLoading, setIsLoading] = useState(false);
+  const gitignorePatternsRef = useRef<string[]>([]);
 
-  // 加载目录内容
+  // Load gitignore patterns
+  const loadGitignore = useCallback(async (directory: string) => {
+    try {
+      const patterns = await invoke<string[]>('parse_gitignore', { directory });
+      gitignorePatternsRef.current = patterns;
+    } catch {
+      gitignorePatternsRef.current = [];
+    }
+  }, []);
+
+  // Load directory content with gitignore filtering
   const loadChildren = useCallback(async (parentPath: string): Promise<FileNode[]> => {
     try {
       const entries = await invoke<Array<{
@@ -35,26 +99,30 @@ export function useFileTree(options: UseFileTreeOptions = {}) {
         modified: number;
       }>>('read_dir', { path: parentPath });
 
-      return entries.map(entry => ({
-        name: entry.name,
-        path: entry.path,
-        isDir: entry.is_dir,
-        size: entry.size,
-        modified: entry.modified,
-        children: entry.is_dir ? [] : undefined,
-        isExpanded: false,
-        isLoading: false,
-      }));
+      return entries
+        .filter(entry => !shouldIgnore(entry.name, entry.is_dir, gitignorePatternsRef.current))
+        .map(entry => ({
+          name: entry.name,
+          path: entry.path,
+          isDir: entry.is_dir,
+          size: entry.size,
+          modified: entry.modified,
+          children: entry.is_dir ? [] : undefined,
+          isExpanded: false,
+          isLoading: false,
+        }));
     } catch (err) {
       console.error('Failed to load directory:', err);
       return [];
     }
   }, []);
 
-  // 加载根目录
+  // Load root directory
   const loadRoot = useCallback(async (path: string) => {
     setIsLoading(true);
     try {
+      // Load gitignore patterns first
+      await loadGitignore(path);
       const children = await loadChildren(path);
       setRootFolderPath(path);
       setTree(children);
@@ -63,16 +131,16 @@ export function useFileTree(options: UseFileTreeOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [loadChildren]);
+  }, [loadChildren, loadGitignore]);
 
-  // 展开/折叠节点
+  // Expand/collapse node
   const toggleExpand = useCallback(async (path: string) => {
     const updateNode = async (nodes: FileNode[]): Promise<FileNode[]> => {
       const result: FileNode[] = [];
       for (const node of nodes) {
         if (node.path === path) {
           if (!node.isExpanded && node.isDir && (!node.children || node.children.length === 0)) {
-            // 首次展开，加载子节点
+            // First expand, load children
             const children = await loadChildren(path);
             result.push({
               ...node,
@@ -101,20 +169,20 @@ export function useFileTree(options: UseFileTreeOptions = {}) {
     setTree(await updateNode(tree));
   }, [tree, loadChildren]);
 
-  // 选择文件
+  // Select file
   const selectFile = useCallback((path: string) => {
     setSelectedPath(path);
     onFileSelect?.(path);
   }, [onFileSelect]);
 
-  // 刷新当前目录
+  // Refresh current directory
   const refresh = useCallback(async () => {
     if (rootFolderPath) {
       await loadRoot(rootFolderPath);
     }
   }, [rootFolderPath, loadRoot]);
 
-  // 创建新文件
+  // Create new file
   const createNewFile = useCallback(async (parentPath: string, name: string) => {
     try {
       const separator = parentPath.includes('\\') ? '\\' : '/';
@@ -128,7 +196,7 @@ export function useFileTree(options: UseFileTreeOptions = {}) {
     }
   }, [refresh]);
 
-  // 创建新文件夹
+  // Create new folder
   const createNewFolder = useCallback(async (parentPath: string, name: string) => {
     try {
       const separator = parentPath.includes('\\') ? '\\' : '/';
@@ -142,7 +210,7 @@ export function useFileTree(options: UseFileTreeOptions = {}) {
     }
   }, [refresh]);
 
-  // 删除文件/文件夹
+  // Delete file/folder
   const deleteItem = useCallback(async (path: string) => {
     try {
       await invoke('delete_path', { path });
@@ -156,7 +224,7 @@ export function useFileTree(options: UseFileTreeOptions = {}) {
     }
   }, [selectedPath, refresh]);
 
-  // 重命名
+  // Rename
   const renameItem = useCallback(async (fromPath: string, toPath: string) => {
     try {
       await invoke('rename_path', { from: fromPath, to: toPath });
@@ -170,7 +238,7 @@ export function useFileTree(options: UseFileTreeOptions = {}) {
     }
   }, [selectedPath, refresh]);
 
-  // 获取常用目录
+  // Get common directories
   const getCommonDirs = useCallback(async () => {
     try {
       return await invoke<{
@@ -185,7 +253,7 @@ export function useFileTree(options: UseFileTreeOptions = {}) {
     }
   }, []);
 
-  // 初始化
+  // Initialize
   useEffect(() => {
     if (rootPath) {
       loadRoot(rootPath);

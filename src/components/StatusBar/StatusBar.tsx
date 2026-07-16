@@ -1,4 +1,4 @@
-ï»¿interface StatusBarProps {
+interface StatusBarProps {
   charCount: number;
   wordCount: number;
   lineCount: number;
@@ -10,6 +10,7 @@
   fileSize?: string;
   encoding?: string;
   lineEnding?: string;
+  currentLineImages?: string[];
 }
 
 export function StatusBar({
@@ -24,37 +25,80 @@ export function StatusBar({
   fileSize,
   encoding = 'UTF-8',
   lineEnding = 'LF',
+  currentLineImages = [],
 }: StatusBarProps) {
   return (
-    <div
-      className="flex items-center justify-between px-3 py-1 text-xs border-t select-none"
-      style={{
-        backgroundColor: 'var(--bg-secondary)',
-        borderColor: 'var(--border-color)',
-        color: 'var(--text-secondary)',
-      }}
-      role="status"
-      aria-label="Editor status"
-    >
-      <div className="flex items-center gap-4">
-        <span title="æ–‡ä»¶å" className="flex items-center gap-1">
-          ğŸ“„ {fileName || 'æœªå‘½å'}
-          {isModified && <span className="text-orange-500">â—</span>}
-        </span>
-        <span title="æ–‡ä»¶ç±»å‹">{fileType}</span>
-        {fileSize && <span title="æ–‡ä»¶å¤§å°">{fileSize}</span>}
-      </div>
+    <>
+      {/* Inline image preview bar */}
+      {currentLineImages.length > 0 && (
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 border-t overflow-x-auto"
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            borderColor: 'var(--border-color)',
+            minHeight: '32px',
+          }}
+        >
+          <span className="text-xs text-[var(--text-secondary)] shrink-0">??? Í¼Æ¬Ô¤ÀÀ:</span>
+          {currentLineImages.map((url, idx) => (
+            <a
+              key={idx}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 group"
+              title={url}
+            >
+              <img
+                src={url}
+                alt={`Preview ${idx + 1}`}
+                className="rounded border transition-all group-hover:shadow-md"
+                style={{
+                  maxWidth: '200px',
+                  maxHeight: '100px',
+                  objectFit: 'contain',
+                  borderColor: 'var(--border-color)',
+                }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </a>
+          ))}
+        </div>
+      )}
 
-      <div className="flex items-center gap-4">
-        <span title="å…‰æ ‡ä½ç½®">
-          è¡Œ {currentLine}, åˆ— {currentCol}
-        </span>
-        <span title="è¡Œæ•°">{lineCount} è¡Œ</span>
-        <span title="å­—æ•°">{wordCount} è¯</span>
-        <span title="å­—ç¬¦æ•°">{charCount} å­—ç¬¦</span>
-        <span title="ç¼–ç ">{encoding}</span>
-        <span title="æ¢è¡Œç¬¦">{lineEnding}</span>
+      {/* Status bar */}
+      <div
+        className="flex items-center justify-between px-3 py-1 text-xs border-t select-none"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          borderColor: 'var(--border-color)',
+          color: 'var(--text-secondary)',
+        }}
+        role="status"
+        aria-label="Editor status"
+      >
+        <div className="flex items-center gap-4">
+          <span title="ÎÄ¼şÃû" className="flex items-center gap-1">
+            ?? {fileName || 'Î´ÃüÃû'}
+            {isModified && <span className="text-orange-500">¡ñ</span>}
+          </span>
+          <span title="ÎÄ¼şÀàĞÍ">{fileType}</span>
+          {fileSize && <span title="ÎÄ¼ş´óĞ¡">{fileSize}</span>}
+        </div>
+
+        <div className="flex items-center gap-4">
+          <span title="¹â±êÎ»ÖÃ">
+            ĞĞ {currentLine}, ÁĞ {currentCol}
+          </span>
+          <span title="ĞĞÊı">{lineCount} ĞĞ</span>
+          <span title="×ÖÊı">{wordCount} ´Ê</span>
+          <span title="×Ö·ûÊı">{charCount} ×Ö·û</span>
+          <span title="±àÂë">{encoding}</span>
+          <span title="»»ĞĞ·û">{lineEnding}</span>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

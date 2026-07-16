@@ -1,4 +1,4 @@
-ï»¿/* Markdown Preview Styles */
+/* Markdown Preview Styles */
 .markdown-preview {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 15px;
@@ -168,7 +168,7 @@
   margin-left: -1.5em;
 }
 
-/* æ•°å­¦å…¬å¼æ ·å¼ */
+/* ÊıÑ§¹«Ê½ÑùÊ½ */
 .markdown-preview .math-block {
   margin: 1em 0;
   padding: 1em;
@@ -187,7 +187,7 @@
   font-family: monospace;
 }
 
-/* KaTeX æ ·å¼è¦†ç›– */
+/* KaTeX ÑùÊ½¸²¸Ç */
 .katex-display {
   margin: 0 !important;
 }
@@ -196,7 +196,7 @@
   font-size: 1.1em;
 }
 
-/* Mermaid å›¾è¡¨æ ·å¼ */
+/* Mermaid Í¼±íÑùÊ½ */
 .markdown-preview .mermaid-container {
   margin: 1em 0;
   padding: 1em;
@@ -217,7 +217,7 @@
   text-align: center;
 }
 
-/* ä»£ç å—æ ·å¼å¢å¼º */
+/* ´úÂë¿éÑùÊ½ÔöÇ¿ */
 .code-lang-label {
   position: absolute;
   top: 6px;
@@ -253,7 +253,7 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* æš—è‰²æ¨¡å¼è°ƒæ•´ */
+/* °µÉ«Ä£Ê½µ÷Õû */
 [data-theme="dark"] .markdown-preview {
   color: #d4d4d4;
 }
@@ -289,7 +289,7 @@
   padding: 0 !important;
 }
 
-/* é¢„è§ˆå†…å®¹åŒºåŸŸ */
+/* Ô¤ÀÀÄÚÈİÇøÓò */
 .preview-content {
   padding: 0;
   height: 100%;

@@ -23,10 +23,36 @@ const FONT_FAMILIES = [
 const ENCODINGS = ['UTF-8', 'UTF-16 LE', 'UTF-16 BE', 'ASCII', 'ISO-8859-1', 'GBK'];
 
 const EDITOR_THEMES = [
-  { label: '默认', value: 'default' },
-  { label: 'Monokai', value: 'monokai' },
-  { label: 'Dracula', value: 'dracula' },
-  { label: 'Solarized', value: 'solarized' },
+  { 
+    label: '默认', 
+    value: 'default',
+    colors: { bg: '#ffffff', fg: '#1e1e1e', keyword: '#0000ff', string: '#a31515', comment: '#008000', line: '#f5f5f5' }
+  },
+  { 
+    label: 'One Dark Pro', 
+    value: 'one-dark-pro',
+    colors: { bg: '#282c34', fg: '#abb2bf', keyword: '#c678dd', string: '#98c379', comment: '#5c6370', line: '#2c313c' }
+  },
+  { 
+    label: 'Solarized Light', 
+    value: 'solarized-light',
+    colors: { bg: '#fdf6e3', fg: '#657b83', keyword: '#859900', string: '#2aa198', comment: '#93a1a1', line: '#eee8d5' }
+  },
+  { 
+    label: 'Dracula', 
+    value: 'dracula',
+    colors: { bg: '#282a36', fg: '#f8f8f2', keyword: '#ff79c6', string: '#f1fa8c', comment: '#6272a4', line: '#343746' }
+  },
+  { 
+    label: 'Monokai', 
+    value: 'monokai',
+    colors: { bg: '#272822', fg: '#f8f8f2', keyword: '#f92672', string: '#e6db74', comment: '#75715e', line: '#3e3d32' }
+  },
+  { 
+    label: 'Solarized', 
+    value: 'solarized',
+    colors: { bg: '#002b36', fg: '#839496', keyword: '#859900', string: '#2aa198', comment: '#586e75', line: '#073642' }
+  },
 ];
 
 const CURSOR_BLINKING = [
@@ -204,6 +230,44 @@ export function SettingsPanel({ settings, onUpdate, onClose }: SettingsPanelProp
                 </select>
               </SettingItem>
 
+              {/* 字体预览区域 */}
+              <div 
+                className="p-4 rounded-lg border"
+                style={{
+                  borderColor: 'var(--border-color)',
+                  backgroundColor: 'var(--bg-primary)',
+                }}
+              >
+                <div className="text-xs mb-2 font-medium" style={{ color: 'var(--text-secondary)' }}>
+                  实时预览
+                </div>
+                <div 
+                  className="p-3 rounded"
+                  style={{
+                    fontFamily: settings.fontFamily,
+                    fontSize: `${settings.fontSize}px`,
+                    backgroundColor: 'var(--bg-sidebar)',
+                    border: '1px solid var(--border-color)',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <div style={{ color: 'var(--text-primary)' }}>
+                    <span style={{ color: '#0000ff' }}>const</span>{' '}
+                    <span style={{ color: '#001080' }}>greeting</span> ={' '}
+                    <span style={{ color: '#a31515' }}>"Hello, World!"</span>;
+                  </div>
+                  <div style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    <span style={{ color: '#008000' }}>// 字体预览 - 当前大小: {settings.fontSize}px</span>
+                  </div>
+                  <div style={{ color: 'var(--text-primary)', marginTop: '4px' }}>
+                    ABCDEFGHIJKLMNOPQRSTUVWXYZ
+                  </div>
+                  <div style={{ color: 'var(--text-primary)' }}>
+                    abcdefghijklmnopqrstuvwxyz 0123456789
+                  </div>
+                </div>
+              </div>
+
               {/* Tab 大小 */}
               <SettingItem label="Tab 大小" description="按下 Tab 键插入的空格数">
                 <select
@@ -370,11 +434,49 @@ export function SettingsPanel({ settings, onUpdate, onClose }: SettingsPanelProp
                       }`}
                       style={{
                         borderColor: settings.editorTheme === theme.value ? 'var(--accent-color)' : 'var(--border-color)',
-                        backgroundColor: 'var(--bg-primary)',
-                        color: 'var(--text-primary)',
+                        backgroundColor: theme.colors.bg,
+                        color: theme.colors.fg,
                       }}
                     >
+                      {/* 颜色预览方块 */}
+                      <div className="flex gap-1 mb-2">
+                        <div 
+                          className="w-4 h-4 rounded-sm" 
+                          style={{ backgroundColor: theme.colors.keyword }}
+                          title="关键字"
+                        />
+                        <div 
+                          className="w-4 h-4 rounded-sm" 
+                          style={{ backgroundColor: theme.colors.string }}
+                          title="字符串"
+                        />
+                        <div 
+                          className="w-4 h-4 rounded-sm" 
+                          style={{ backgroundColor: theme.colors.comment }}
+                          title="注释"
+                        />
+                        <div 
+                          className="w-4 h-4 rounded-sm" 
+                          style={{ backgroundColor: theme.colors.fg }}
+                          title="文字"
+                        />
+                      </div>
                       <div className="text-sm font-medium">{theme.label}</div>
+                      {/* 代码预览 */}
+                      <div 
+                        className="mt-2 p-2 rounded text-xs"
+                        style={{ 
+                          backgroundColor: theme.colors.line,
+                          fontFamily: settings.fontFamily,
+                        }}
+                      >
+                        <div>
+                          <span style={{ color: theme.colors.keyword }}>const</span>{' '}
+                          <span style={{ color: theme.colors.fg }}>x</span> ={' '}
+                          <span style={{ color: theme.colors.string }}>"hi"</span>;
+                        </div>
+                        <div style={{ color: theme.colors.comment }}>// comment</div>
+                      </div>
                     </button>
                   ))}
                 </div>

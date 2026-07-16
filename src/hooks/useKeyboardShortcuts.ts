@@ -63,4 +63,5 @@ export const SHORTCUTS = {
   NEW_TAB: 'Ctrl+T',
   NEXT_TAB: 'Ctrl+Tab',
   PREV_TAB: 'Ctrl+Shift+Tab',
+  FULLSCREEN_PREVIEW: 'Ctrl+Shift+F',
 } as const;
